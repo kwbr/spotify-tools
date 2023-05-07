@@ -7,6 +7,7 @@ from spotipy.oauth2 import SpotifyOAuth
 
 from . import config
 
+
 @click.group()
 @click.version_option()
 def cli():
@@ -16,10 +17,14 @@ def cli():
 
 
 @cli.command()
-@click.option("--count", default=1,help="Number of albums.")
+@click.option("--count", default=1, help="Number of albums.")
 def random_album(count):
     """
     Get random album from user's Library
+
+    Returns random albums of the user's Library. Spotify lacks a randomization feature at the album level.
+
+    Inspired by https://shuffle.ninja/
     """
     cache_dir = config.user_cache_dir()
     conf = config.load_config()
@@ -34,7 +39,7 @@ def random_album(count):
             client_id=client_id,
             client_secret=client_secret,
             redirect_uri=redirect_uri,
-            cache_handler=spotipy.CacheFileHandler(cache_path=cache_dir)
+            cache_handler=spotipy.CacheFileHandler(cache_path=cache_dir),
         )
     )
 
