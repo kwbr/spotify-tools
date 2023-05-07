@@ -5,18 +5,27 @@ import click
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
-from .config import load_config, user_cache_dir
+from . import config
 
-
-@click.command()
+@click.group()
 @click.version_option()
-@click.argument("count", required=False, default=1)
-def cli(count):
-    conf = load_config()
+def cli():
+    """
+    A tool for working with Spotify
+    """
+
+
+@cli.command()
+@click.option("--count", default=1,help="Number of albums.")
+def random_album(count):
+    """
+    Get random album from user's Library
+    """
+    cache_dir = config.user_cache_dir()
+    conf = config.load_config()
     client_id = conf["client_id"]
     client_secret = conf["client_secret"]
     redirect_uri = conf["redirect_uri"]
-    cache_dir = user_cache_dir()
     scope = "user-library-read"
 
     sp = spotipy.Spotify(
@@ -34,4 +43,4 @@ def cli(count):
     random_list = [random.randint(0, total_count) for i in range(count)]
     for random_index in random_list:
         results = sp.current_user_saved_albums(limit=1, offset=random_index)
-        print("%s" % (results["items"][0]["album"]["uri"]))
+        click.echo("%s" % (results["items"][0]["album"]["uri"]))

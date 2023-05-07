@@ -2,7 +2,7 @@ import os
 
 from setuptools import setup
 
-VERSION = "0.1a"
+VERSION = "0.2"
 
 
 def get_long_description():
@@ -27,10 +27,10 @@ setup(
     },
     license="Apache License, Version 2.0",
     version=VERSION,
-    packages=["random_album"],
+    packages=["spotify_tools"],
     entry_points="""
         [console_scripts]
-        sp-random-album=random_album.cli:cli
+        spt=spotify_tools.cli:cli
     """,
     install_requires=["click", "spotipy"],
     extras_require={
