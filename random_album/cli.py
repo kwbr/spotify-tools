@@ -5,7 +5,7 @@ import click
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
-from .config import load_config
+from .config import load_config, user_cache_dir
 
 
 @click.command()
@@ -16,6 +16,7 @@ def cli(count):
     client_id = conf["client_id"]
     client_secret = conf["client_secret"]
     redirect_uri = conf["redirect_uri"]
+    cache_dir = user_cache_dir()
     scope = "user-library-read"
 
     sp = spotipy.Spotify(
@@ -24,6 +25,7 @@ def cli(count):
             client_id=client_id,
             client_secret=client_secret,
             redirect_uri=redirect_uri,
+            cache_handler=spotipy.CacheFileHandler(cache_path=cache_dir)
         )
     )
 
