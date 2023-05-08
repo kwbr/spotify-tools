@@ -1,4 +1,3 @@
-import json
 import random
 
 import click
@@ -22,7 +21,8 @@ def random_album(count):
     """
     Get random album from user's Library
 
-    Returns random albums of the user's Library. Spotify lacks a randomization feature at the album level.
+    Returns random albums of the user's Library. Spotify lacks a randomization
+    feature at the album level.
 
     Inspired by https://shuffle.ninja/
     """
