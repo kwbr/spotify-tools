@@ -4,11 +4,13 @@
 
 Collection of helpers I use to enhance my music listening experience with Spotify.
 
-## Installation 
+## Installation
 
 Install this tool using `pip`:
 
-    pip install git+https://github.com/kwbr/spotify-tools
+```
+pip install git+https://github.com/kwbr/spotify-tools
+```
 
 ## Usage
 
@@ -32,10 +34,14 @@ Commands:
 
 To contribute to this tool, first checkout the code. Then create a new virtual environment:
 
-    cd spotify-tools
-    python -m venv venv
-    source venv/bin/activate
+```
+cd spotify-tools
+python -m venv venv
+source venv/bin/activate
+```
 
 Now install the dependencies and test dependencies:
 
-    pip install -e '.[test]'
+```
+pip install -e '.[test]'
+```
