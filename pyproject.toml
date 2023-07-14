@@ -1,0 +1,21 @@
+[project]
+name = "spotify-tools"
+version = "0.4"
+description = "Various tools working with Spotify"
+readme = "README.md"
+authors = [{name = "Kai Weber"}]
+scripts = {spt = "spotify_tools.cli:cli"}
+license = {text = "Apache-2.0"}
+requires-python = ">=3.8"
+dependencies = [
+    "click",
+    "spotipy"
+]
+
+[project.urls]
+Homepage = "https://github.com/kwbr/spotify-tools"
+Changelog = "https://github.com/kwbr/spotify-tools/releases"
+Issues = "https://github.com/kwbr/spotify-tools/issues"
+
+[project.optional-dependencies]
+test = ["pytest"]
