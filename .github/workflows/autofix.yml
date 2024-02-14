@@ -18,7 +18,7 @@ jobs:
       - name: Auto-format Markdown
         run: |
           find ./ -iname "*.md" -exec mdformat "{}" \;
-      - uses: peter-evans/create-pull-request@v5
+      - uses: peter-evans/create-pull-request@v6
         with:
           assignees: ${{ github.actor }}
           commit-message: "[autofix] Format Markdown"
