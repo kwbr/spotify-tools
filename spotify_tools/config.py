@@ -1,29 +1,28 @@
 import os
-import tomllib
 from pathlib import Path
+
+import tomllib
 
 
 def user_cache_dir():
     config = (
         os.environ.get("LOCALAPPDATA")
         or os.environ.get("XDG_CAHE_HOME")
-        or os.path.expanduser("~/.cache")
+        or Path("~/.cache").expanduser()
     )
-    path = Path(config) / "spotify-tools"
-    return path
+    return Path(config) / "spotify-tools"
 
 
 def user_config_dir():
     config = (
         os.environ.get("APPDATA")
         or os.environ.get("XDG_CONFIG_HOME")
-        or os.path.expanduser("~/.config")
+        or Path("~/.config").expanduser()
     )
-    path = Path(config) / "spotify-tools"
-    return path
+    return Path(config) / "spotify-tools"
 
 
 def load_config():
     config_dir = user_config_dir()
-    with open(config_dir / "config.toml", "rb") as f:
+    with Path(config_dir / "config.toml").open("rb") as f:
         return tomllib.load(f)

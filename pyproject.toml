@@ -4,13 +4,15 @@ version = "0.4"
 description = "Various tools working with Spotify"
 readme = "README.md"
 authors = [{name = "Kai Weber"}]
-scripts = {spt = "spotify_tools.cli:cli"}
 license = {text = "Apache-2.0"}
 requires-python = ">=3.8"
 dependencies = [
     "click",
     "spotipy"
 ]
+
+[project.scripts]
+spt = "spotify_tools.cli:cli"
 
 [project.urls]
 Homepage = "https://github.com/kwbr/spotify-tools"
@@ -19,3 +21,11 @@ Issues = "https://github.com/kwbr/spotify-tools/issues"
 
 [project.optional-dependencies]
 test = ["pytest"]
+lint = ["mypy", "ruff"]
+
+[tool.ruff]
+select = ["ALL"]
+ignore = [
+    "ANN",
+    "D",
+]
