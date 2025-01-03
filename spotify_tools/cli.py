@@ -46,4 +46,4 @@ def random_album(count):
     random_list = [secrets.randbelow(total_count) for i in range(count)]
     for random_index in random_list:
         results = sp.current_user_saved_albums(limit=1, offset=random_index)
-        click.echo("%s" % (results["items"][0]["album"]["uri"]))
+        click.echo("{}".format(results["items"][0]["album"]["uri"]))

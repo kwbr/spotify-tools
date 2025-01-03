@@ -1,6 +1,6 @@
 [project]
 name = "spotify-tools"
-version = "0.4"
+version = "0.5"
 description = "Various tools working with Spotify"
 readme = "README.md"
 authors = [{name = "Kai Weber"}]
@@ -11,6 +11,10 @@ dependencies = [
     "spotipy"
 ]
 
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project.scripts]
 spt = "spotify_tools.cli:cli"
 
@@ -19,13 +23,18 @@ Homepage = "https://github.com/kwbr/spotify-tools"
 Changelog = "https://github.com/kwbr/spotify-tools/releases"
 Issues = "https://github.com/kwbr/spotify-tools/issues"
 
-[project.optional-dependencies]
-test = ["pytest"]
-lint = ["mypy", "ruff"]
-
 [tool.ruff]
-select = ["ALL"]
-ignore = [
+lint.select = ["ALL"]
+lint.ignore = [
     "ANN",
     "D",
+]
+
+[dependency-groups]
+test = [
+    "pytest"
+]
+lint = [
+    "mypy",
+    "ruff"
 ]
