@@ -10,8 +10,7 @@ from . import config
 @click.group()
 @click.version_option()
 def cli():
-    """A tool for working with Spotify.
-    """
+    """A tool for working with Spotify."""
 
 
 @cli.command()
