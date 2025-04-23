@@ -2,6 +2,6 @@
 Spotify Tools - Collection of helpers to enhance music listening experience with Spotify.
 """
 
-from .types import Album
+import importlib.metadata
 
-__version__ = "0.7"
+__version__ = importlib.metadata.version("spotify-tools")
