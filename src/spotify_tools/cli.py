@@ -5,6 +5,7 @@ Command line interface for Spotify tools.
 import click
 
 from . import album, cache, config, spotify
+from .types import Album
 
 
 # CLI Setup and Output Functions
@@ -212,9 +213,10 @@ def output_album(ctx, alb):
 
 
 @cli.command()
+@click.option("--count-by-year", is_flag=True, help="List album count by year.")
 @click.pass_context
-def list_years(ctx):
-    """List all years with albums in your library and count per year."""
+def list_albums(ctx, count_by_year):
+    """List all albums in your library and count per year."""
     cache_data = cache.load_albums()
 
     if cache_data is None:
@@ -224,11 +226,22 @@ def list_years(ctx):
     albums_by_year = cache_data["albums_by_year"]
     years = album.get_sorted_years(albums_by_year)
 
-    total_albums = album.count_total_albums(albums_by_year)
-    echo_always(f"Total albums in library: {total_albums}\n")
-    echo_always("Albums by year:")
+    if count_by_year:
+        total_albums = album.count_total_albums(albums_by_year)
+        echo_always(f"Total albums in library: {total_albums}\n")
+        echo_always("Albums by year:")
+        display_albums_by_year(albums_by_year, years)
+    else:
+        display_albums(albums_by_year, years)
 
-    display_albums_by_year(albums_by_year, years)
+
+def display_albums(albums_by_year, years):
+    for year in years:
+        year_str = str(year)
+        albums = [Album(**album_dict) for album_dict in albums_by_year[year_str]]
+        for album in albums:
+            artists_str = album.format_artists()
+            echo_always(f"{year}: {album.name} by {artists_str}")
 
 
 def display_albums_by_year(albums_by_year, years):

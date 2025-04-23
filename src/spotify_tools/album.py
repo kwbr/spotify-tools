@@ -165,42 +165,6 @@ def select_random_albums(albums, count):
     return random.sample(albums, min(count, len(albums)))
 
 
-def get_albums_by_year(sp, year, count=None, from_cache=True):
-    """
-    Get albums by year, optionally selecting random ones.
-
-    Args:
-        sp: Spotify client.
-        year: Year to filter by.
-        count: Optional number of random albums to select.
-        from_cache: Whether to use cached data.
-
-    Returns:
-        list: Albums from the specified year.
-    """
-    # Try to load from cache first if requested
-    cache_data = cache.load_albums() if from_cache else None
-
-    if cache_data is None:
-        albums_by_year = fetch_all_albums_parallel(
-            sp
-        )  # Use parallel fetching by default
-    else:
-        albums_by_year = cache_data["albums_by_year"]
-
-    # Convert year to string for dictionary lookup
-    year_str = str(year)
-    matching_album_dicts = albums_by_year.get(year_str, [])
-
-    # Convert dictionaries to Album objects
-    matching_albums = [Album(**album_dict) for album_dict in matching_album_dicts]
-
-    if count and matching_albums:
-        return select_random_albums(matching_albums, count)
-
-    return matching_albums
-
-
 def count_total_albums(albums_by_year):
     """Count the total number of albums across all years."""
     return sum(len(albums) for albums in albums_by_year.values())
