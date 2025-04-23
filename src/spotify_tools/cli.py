@@ -11,11 +11,33 @@ from spotipy.oauth2 import SpotifyOAuth
 from . import config
 
 
+###===================================================================
+### CLI Group Definition
+###===================================================================
+
 @click.group()
 @click.version_option()
 def cli():
     """A tool for working with Spotify."""
 
+
+###===================================================================
+### Constants
+###===================================================================
+
+def default_batch_size():
+    """Spotify API limit for batch requests."""
+    return 50
+
+
+def default_ping_timeout():
+    """Default timeout for API pings."""
+    return 5000
+
+
+###===================================================================
+### Cache Management
+###===================================================================
 
 def get_albums_cache_path():
     """Get path to the comprehensive albums cache file."""
@@ -27,67 +49,186 @@ def get_albums_cache_path():
 def save_all_albums_to_cache(albums_by_year):
     """Save all albums to cache with year grouping."""
     cache_path = get_albums_cache_path()
-    cache_data = {
+    cache_data = create_cache_data(albums_by_year)
+    write_json_to_file(cache_path, cache_data)
+
+
+def create_cache_data(albums_by_year):
+    """Create a cache data structure with timestamp."""
+    return {
         "timestamp": time.time(),
         "albums_by_year": albums_by_year
     }
-    with open(cache_path, "w") as f:
-        json.dump(cache_data, f)
+
+
+def write_json_to_file(path, data):
+    """Write JSON data to a file."""
+    with open(path, "w") as f:
+        json.dump(data, f)
 
 
 def load_albums_from_cache():
     """Load all albums from cache if available."""
     cache_path = get_albums_cache_path()
-    print(f"Looking for cache at: {cache_path}")  # Debug line
-    if cache_path.exists():
-        with open(cache_path, "r") as f:
+    print(f"Looking for cache at: {cache_path}")
+    if not cache_path.exists():
+        return None
+    return load_json_with_error_handling(cache_path)
+
+
+def load_json_with_error_handling(path):
+    """Load JSON from file with error handling."""
+    try:
+        with open(path, "r") as f:
             return json.load(f)
-    return None
+    except json.JSONDecodeError as e:
+        click.echo(f"Error reading cache file: {e}")
+        return None
+
+
+###===================================================================
+### Spotify API Interactions
+###===================================================================
+
+def create_spotify_client(cache_dir):
+    """Create and configure a Spotify API client."""
+    conf = config.load_config()
+    token_cache_path = Path(cache_dir / "token")
+
+    return spotipy.Spotify(
+        auth_manager=SpotifyOAuth(
+            scope="user-library-read",
+            client_id=conf["client_id"],
+            client_secret=conf["client_secret"],
+            redirect_uri=conf["redirect_uri"],
+            cache_handler=spotipy.CacheFileHandler(cache_path=token_cache_path),
+        ),
+    )
 
 
 def fetch_all_albums(sp):
     """Fetch all albums from Spotify and organize them by year."""
     albums_by_year = {}
-
-    # Fetch albums in batches of 50 (Spotify API limit)
-    batch_size = 50
-    probe = sp.current_user_saved_albums(limit=1)
-    total_albums = probe["total"]
+    total_albums = get_total_album_count(sp)
 
     with click.progressbar(
         length=total_albums,
         label='Fetching and organizing all albums',
     ) as bar:
-        offset = 0
-        while offset < total_albums:
-            batch = sp.current_user_saved_albums(limit=batch_size, offset=offset)
+        fetch_albums_in_batches(sp, total_albums, albums_by_year, bar)
 
-            # Process albums and organize by year
-            for item in batch["items"]:
-                album = item["album"]
-                release_date = album["release_date"]
-                # Handle different date formats (YYYY, YYYY-MM, YYYY-MM-DD)
-                album_year = int(release_date.split("-")[0])
-
-                # Create year entry if it doesn't exist
-                if album_year not in albums_by_year:
-                    albums_by_year[album_year] = []
-
-                # Save album info
-                albums_by_year[album_year].append({
-                    "uri": album["uri"],
-                    "name": album["name"],
-                    "artists": [artist["name"] for artist in album["artists"]],
-                    "added_at": item["added_at"]
-                })
-
-            offset += batch_size
-            bar.update(min(batch_size, total_albums - offset + batch_size))
-
-    # Save all albums to cache
     save_all_albums_to_cache(albums_by_year)
     return albums_by_year
 
+
+def get_total_album_count(sp):
+    """Get the total number of albums in the user's library."""
+    probe = sp.current_user_saved_albums(limit=1)
+    return probe["total"]
+
+
+def fetch_albums_in_batches(sp, total_albums, albums_by_year, progress_bar):
+    """Fetch albums in batches and organize by year."""
+    batch_size = default_batch_size()
+    offset = 0
+
+    while offset < total_albums:
+        batch = sp.current_user_saved_albums(limit=batch_size, offset=offset)
+        process_album_batch(batch, albums_by_year)
+
+        offset += batch_size
+        progress_bar.update(min(batch_size, total_albums - offset + batch_size))
+
+
+def process_album_batch(batch, albums_by_year):
+    """Process a batch of albums and organize by year."""
+    for item in batch["items"]:
+        album = item["album"]
+        album_year = extract_year_from_date(album["release_date"])
+
+        ensure_year_entry_exists(albums_by_year, album_year)
+        add_album_to_year(albums_by_year, album_year, album, item["added_at"])
+
+
+def extract_year_from_date(date_string):
+    """Extract year from a date string (handles YYYY, YYYY-MM, YYYY-MM-DD)."""
+    return int(date_string.split("-")[0])
+
+
+def ensure_year_entry_exists(albums_by_year, year):
+    """Ensure a year entry exists in the albums dictionary."""
+    if year not in albums_by_year:
+        albums_by_year[year] = []
+
+
+def add_album_to_year(albums_by_year, year, album, added_at):
+    """Add an album to the appropriate year in the collection."""
+    albums_by_year[year].append({
+        "uri": album["uri"],
+        "name": album["name"],
+        "artists": extract_artist_names(album["artists"]),
+        "added_at": added_at
+    })
+
+
+def extract_artist_names(artists_data):
+    """Extract artist names from artist data objects."""
+    return [artist["name"] for artist in artists_data]
+
+
+###===================================================================
+### Cache Age Calculation
+###===================================================================
+
+def calculate_cache_age(timestamp):
+    """Calculate the age of the cache in days and hours."""
+    age_seconds = time.time() - timestamp
+    days = int(age_seconds / (60 * 60 * 24))
+    hours = int((age_seconds % (60 * 60 * 24)) / (60 * 60))
+    return days, hours
+
+
+def format_cache_age_message(days, hours):
+    """Format a message about cache age."""
+    if days > 0:
+        return f"Using cached albums database ({days} days, {hours} hours old)."
+    return f"Using cached albums database ({hours} hours old)."
+
+
+###===================================================================
+### Album Selection
+###===================================================================
+
+def select_random_albums(albums, count):
+    """Select random albums from a list, respecting count limit."""
+    return random.sample(
+        albums,
+        min(count, len(albums))
+    )
+
+
+def get_random_indexes(total, count):
+    """Generate random indexes within a range."""
+    return [secrets.randbelow(total) for i in range(count)]
+
+
+def format_album_output(album):
+    """Format an album for console output."""
+    artists = join_artists(album.get("artists", ["Unknown"]))
+    return [
+        f"{album['name']} by {artists}",
+        f"{album['uri']}"
+    ]
+
+
+def join_artists(artists):
+    """Join artist names into a comma-separated string."""
+    return ", ".join(artists)
+
+
+###===================================================================
+### CLI Commands
+###===================================================================
 
 @cli.command()
 @click.option("--count", default=1, help="Number of albums.")
@@ -105,77 +246,73 @@ def random_album(count, year, refresh):
     Inspired by https://shuffle.ninja/
     """
     cache_dir = config.user_cache_dir()
-    conf = config.load_config()
-    client_id = conf["client_id"]
-    client_secret = conf["client_secret"]
-    redirect_uri = conf["redirect_uri"]
-    scope = "user-library-read"
-    toke_cache_path = Path( cache_dir / "token" )
+    sp = create_spotify_client(cache_dir)
 
-    sp = spotipy.Spotify(
-        auth_manager=SpotifyOAuth(
-            scope=scope,
-            client_id=client_id,
-            client_secret=client_secret,
-            redirect_uri=redirect_uri,
-            cache_handler=spotipy.CacheFileHandler(cache_path=toke_cache_path),
-        ),
-    )
-
-    # Check if we need to use the comprehensive cache
     if year is not None or refresh:
-        # Try to load from cache first unless refresh is requested
-        cache_data = None if refresh else load_albums_from_cache()
-
-        if cache_data is not None:
-            albums_by_year = cache_data["albums_by_year"]
-            cache_age = time.time() - cache_data["timestamp"]
-            days_old = int(cache_age / (60 * 60 * 24))
-            hours_old = int((cache_age % (60 * 60 * 24)) / (60 * 60))
-
-            if days_old > 0:
-                click.echo(f"Using cached albums database ({days_old} days, {hours_old} hours old).")
-            else:
-                click.echo(f"Using cached albums database ({hours_old} hours old).")
-        else:
-            # Fetch all albums and organize by year
-            albums_by_year = fetch_all_albums(sp)
-
-        # Get albums for the specified year
-        if year is not None:
-            year_str = str(year)
-            matching_albums = albums_by_year.get(year_str, [])
-
-            if not matching_albums:
-                click.echo(f"No albums from {year} found in your library.")
-                return
-
-            click.echo(f"Found {len(matching_albums)} albums from {year}.")
-
-            # Select random albums from the filtered list
-            selected_albums = random.sample(
-                matching_albums,
-                min(count, len(matching_albums))
-            )
-
-            for album in selected_albums:
-                # Print album name and artists for better context
-                artists = ", ".join(album.get("artists", ["Unknown"]))
-                click.echo(f"{album['name']} by {artists}")
-                click.echo(f"{album['uri']}")
-        else:
-            # If year not specified but refresh was requested, just report cache refresh
-            click.echo(f"Album database refreshed with {sum(len(albums) for albums in albums_by_year.values())} albums.")
+        handle_year_or_refresh_option(sp, year, count, refresh)
     else:
-        # The original random selection logic when no year filter is specified and no refresh needed
-        probe = sp.current_user_saved_albums(limit=1)
-        total_count = probe["total"]
-        random_list = [secrets.randbelow(total_count) for i in range(count)]
-        for random_index in random_list:
-            results = sp.current_user_saved_albums(limit=1, offset=random_index)
-            album = results["items"][0]["album"]
-            artists = ", ".join(artist["name"] for artist in album["artists"])
-            click.echo(f"{album['uri']} - {album['name']} by {artists}")
+        handle_simple_random_selection(sp, count)
+
+
+def handle_year_or_refresh_option(sp, year, count, refresh):
+    """Handle when year filter or refresh is specified."""
+    # Try to load from cache first unless refresh is requested
+    cache_data = None if refresh else load_albums_from_cache()
+
+    if cache_data is not None:
+        albums_by_year = cache_data["albums_by_year"]
+        days, hours = calculate_cache_age(cache_data["timestamp"])
+        click.echo(format_cache_age_message(days, hours))
+    else:
+        albums_by_year = fetch_all_albums(sp)
+
+    # Handle year filter if specified
+    if year is not None:
+        handle_year_filter(albums_by_year, year, count)
+    else:
+        # Just report cache refresh
+        total_albums = count_total_albums(albums_by_year)
+        click.echo(f"Album database refreshed with {total_albums} albums.")
+
+
+def handle_year_filter(albums_by_year, year, count):
+    """Handle filtering and selecting albums by year."""
+    year_str = str(year)
+    matching_albums = albums_by_year.get(year_str, [])
+
+    if not matching_albums:
+        click.echo(f"No albums from {year} found in your library.")
+        return
+
+    click.echo(f"Found {len(matching_albums)} albums from {year}.")
+
+    # Select and display random albums
+    selected_albums = select_random_albums(matching_albums, count)
+    for album in selected_albums:
+        for line in format_album_output(album):
+            click.echo(line)
+
+
+def handle_simple_random_selection(sp, count):
+    """Handle random album selection without year filter."""
+    total_count = get_total_album_count(sp)
+    random_indexes = get_random_indexes(total_count, count)
+
+    for index in random_indexes:
+        album = fetch_single_album(sp, index)
+        for line in format_album_output(album):
+            click.echo(line)
+
+
+def fetch_single_album(sp, index):
+    """Fetch a single album by index."""
+    results = sp.current_user_saved_albums(limit=1, offset=index)
+    return results["items"][0]["album"]
+
+
+def count_total_albums(albums_by_year):
+    """Count the total number of albums across all years."""
+    return sum(len(albums) for albums in albums_by_year.values())
 
 
 @cli.command()
@@ -188,12 +325,23 @@ def list_years():
         return
 
     albums_by_year = cache_data["albums_by_year"]
-    years = sorted([int(year) for year in albums_by_year.keys()])
+    years = get_sorted_years(albums_by_year)
 
-    total_albums = sum(len(albums) for albums in albums_by_year.values())
+    total_albums = count_total_albums(albums_by_year)
     click.echo(f"Total albums in library: {total_albums}\n")
     click.echo("Albums by year:")
 
+    display_albums_by_year(albums_by_year, years)
+
+
+def get_sorted_years(albums_by_year):
+    """Get a sorted list of years from the albums dictionary."""
+    return sorted([int(year) for year in albums_by_year.keys()])
+
+
+def display_albums_by_year(albums_by_year, years):
+    """Display album counts by year."""
     for year in years:
-        count = len(albums_by_year[year])
+        year_str = str(year)
+        count = len(albums_by_year[year_str])
         click.echo(f"{year}: {count} albums")
