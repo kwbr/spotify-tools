@@ -76,22 +76,37 @@ def random_album(ctx, count, year, refresh):
 
 def handle_year_or_refresh_option(ctx, sp, year, count, refresh):
     """Handle when year filter or refresh is specified."""
+    # Set up worker count before creating progress bar
+    max_workers = ctx.obj.get("MAX_WORKERS", 5)
+    
     # Try to load from cache first unless refresh is requested
-    cache_data = None if refresh else cache.load_albums()
-    echo_debug(ctx, f"Looking for cache: {'found' if cache_data else 'not found'}")
+    if refresh:
+        echo_debug(ctx, "Bypassing cache due to refresh request")
+        cache_data = None
+    else:
+        cache_data = cache.load_albums()
+        echo_debug(ctx, f"Looking for cache: {'found' if cache_data else 'not found'}")
 
     if cache_data is not None:
         albums_by_year = cache_data["albums_by_year"]
         days, hours = cache.calculate_cache_age(cache_data["timestamp"])
         echo_verbose(ctx, cache.format_cache_age_message(days, hours))
     else:
+        # Log parallel fetching information before progress bar
+        echo_verbose(ctx, f"Using parallel fetching with {max_workers} workers")
+        
         # Create progress bar for fetching albums
         with click.progressbar(
             length=album.get_total_album_count(sp),
             label="Fetching and organizing all albums",
         ) as bar:
             progress_callback = create_progress_callback(bar)
-            albums_by_year = album.fetch_all_albums(sp, progress_callback)
+            
+            albums_by_year = album.fetch_all_albums_parallel(
+                sp, 
+                progress_callback, 
+                max_workers=max_workers
+            )
 
     # Handle year filter if specified
     if year is not None:
@@ -101,24 +116,25 @@ def handle_year_or_refresh_option(ctx, sp, year, count, refresh):
         total_albums = album.count_total_albums(albums_by_year)
         echo_verbose(ctx, f"Album database refreshed with {total_albums} albums.")
 
-
 def handle_year_filter(ctx, sp, albums_by_year, year, count):
     """Handle filtering and selecting albums by year."""
     # Convert integer year parameter to string for dictionary lookup
     year_str = str(year)
-    matching_albums = albums_by_year.get(year_str, [])
+    matching_album_dicts = albums_by_year.get(year_str, [])
 
-    if not matching_albums:
+    if not matching_album_dicts:
         echo_verbose(ctx, f"No albums from {year} found in your library.")
         return
 
+    from spotify_tools.types import Album
+    matching_albums = [Album(**album_dict) for album_dict in matching_album_dicts]
+    
     echo_verbose(ctx, f"Found {len(matching_albums)} albums from {year}.")
 
     # Select and display random albums
     selected_albums = album.select_random_albums(matching_albums, count)
     for alb in selected_albums:
         output_album(ctx, alb)
-
 
 def handle_simple_random_selection(ctx, sp, count):
     """Handle random album selection without year filter."""
@@ -129,15 +145,20 @@ def handle_simple_random_selection(ctx, sp, count):
 
 
 def output_album(ctx, alb):
-    """Output album based on verbosity level."""
+    """
+    Output album based on verbosity level.
+    
+    Args:
+        ctx: Click context.
+        alb: Album object.
+    """
     # In any verbosity level, always output the URI
-    echo_always(alb["uri"])
+    echo_always(alb.uri)
 
     # Add album details in verbose mode
     if ctx.obj["VERBOSE"] >= 1:
-        artists = ", ".join(alb.get("artists", ["Unknown"]))
-        echo_verbose(ctx, f"Album: {alb['name']} by {artists}")
-
+        artists_str = alb.format_artists()
+        echo_verbose(ctx, f"Album: {alb.name} by {artists_str}")
 
 @cli.command()
 @click.pass_context
