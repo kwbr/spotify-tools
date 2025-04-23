@@ -241,7 +241,7 @@ def display_albums(albums_by_year, years):
         albums = [Album(**album_dict) for album_dict in albums_by_year[year_str]]
         for album in albums:
             artists_str = album.format_artists()
-            echo_always(f"{year}: {album.name} by {artists_str}")
+            echo_always(f"{album.uri}: {album.name} by {artists_str} ({year})")
 
 
 def display_albums_by_year(albums_by_year, years):
