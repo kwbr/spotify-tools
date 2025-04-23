@@ -54,77 +54,113 @@ def create_progress_callback(progress_bar):
 @cli.command()
 @click.option("--count", default=1, help="Number of albums.")
 @click.option("--year", type=int, help="Filter albums by release year.")
-@click.option("--refresh", is_flag=True, help="Refresh the album cache.")
 @click.pass_context
-def random_album(ctx, count, year, refresh):
+def random_album(ctx, count, year):
     """Get random album from user's Library.
 
     Returns random albums of the user's Library. Spotify lacks a randomization
     feature at the album level.
 
     When using --year, returns only albums released in the specified year.
-    All albums are cached for faster subsequent runs. Use --refresh to update the cache.
+    All albums are cached for faster subsequent runs. Use the refresh-cache command 
+    to update an existing cache.
 
     Inspired by https://shuffle.ninja/
     """
-    cache_dir = config.user_cache_dir()
-
-    with spotify.create_spotify_client(cache_dir) as sp:
-        if year is not None or refresh:
-            handle_year_or_refresh_option(ctx, sp, year, count, refresh)
-        else:
-            handle_simple_random_selection(ctx, sp, count)
-
-
-def handle_year_or_refresh_option(ctx, sp, year, count, refresh):
-    """Handle when year filter or refresh is specified."""
-    # Set up worker count before creating progress bar
-    max_workers = ctx.obj.get("MAX_WORKERS", 5)
-
-    # Try to load from cache first unless refresh is requested
-    if refresh:
-        echo_debug(ctx, "Bypassing cache due to refresh request")
-        cache_data = None
-    else:
-        cache_data = cache.load_albums()
-        echo_debug(ctx, f"Looking for cache: {'found' if cache_data else 'not found'}")
-
+    # Check if we have a cache first
+    cache_data = cache.load_albums()
+    
     if cache_data is not None:
-        albums_by_year = cache_data["albums_by_year"]
+        # Use existing cache
+        echo_debug(ctx, "Using existing album cache")
         days, hours = cache.calculate_cache_age(cache_data["timestamp"])
         echo_verbose(ctx, cache.format_cache_age_message(days, hours))
+        albums_by_year = cache_data["albums_by_year"]
     else:
-        # Log parallel fetching information before progress bar
-        echo_verbose(ctx, f"Using parallel fetching with {max_workers} workers")
+        # No cache available, need to build one (requires Spotify client)
+        echo_always("No album cache found. Building cache now (this may take a while)...")
+        cache_dir = config.user_cache_dir()
+        with spotify.create_spotify_client(cache_dir) as sp:
+            albums_by_year = refresh_album_cache(
+                ctx, 
+                sp, 
+                max_workers=ctx.obj.get("MAX_WORKERS", 5)
+            )
+    
+    # Now handle the album selection using the cache
+    if year is not None:
+        # Filter by year
+        handle_year_filter(ctx, albums_by_year, year, count)
+    else:
+        # No filter, get random albums from all years
+        handle_simple_random_selection(ctx, albums_by_year, count)
 
-        # Create progress bar for fetching albums
+
+def refresh_album_cache(ctx, sp, max_workers=5, show_progress=True):
+    """
+    Refresh the album cache and return the albums by year.
+    
+    Args:
+        ctx: Click context.
+        sp: Spotify client.
+        max_workers: Maximum number of parallel workers.
+        show_progress: Whether to show a progress bar.
+        
+    Returns:
+        dict: Albums organized by year.
+    """
+    echo_verbose(ctx, f"Using parallel fetching with {max_workers} workers")
+    
+    # Create progress bar for fetching albums
+    total_albums = album.get_total_album_count(sp)
+    
+    if show_progress:
         with click.progressbar(
-            length=album.get_total_album_count(sp),
+            length=total_albums,
             label="Fetching and organizing all albums",
         ) as bar:
             progress_callback = create_progress_callback(bar)
-
+            
             albums_by_year = album.fetch_all_albums_parallel(
                 sp, progress_callback, max_workers=max_workers
             )
-
-    # Handle year filter if specified
-    if year is not None:
-        handle_year_filter(ctx, sp, albums_by_year, year, count)
     else:
-        # Just report cache refresh
-        total_albums = album.count_total_albums(albums_by_year)
-        echo_verbose(ctx, f"Album database refreshed with {total_albums} albums.")
+        albums_by_year = album.fetch_all_albums_parallel(
+            sp, max_workers=max_workers
+        )
+    
+    # Report cache refresh
+    total_albums = album.count_total_albums(albums_by_year)
+    echo_always(f"Album database refreshed with {total_albums} albums.")
+    
+    return albums_by_year
 
 
-def handle_year_filter(ctx, sp, albums_by_year, year, count):
+@cli.command(name="refresh-cache")
+@click.option("--max-workers", default=5, help="Maximum number of parallel workers.")
+@click.pass_context
+def refresh_cache(ctx, max_workers):
+    """Force a refresh of the album cache.
+    
+    This command updates an existing cache or creates a new one by fetching all albums
+    from your Spotify library. While the random-album command will automatically create 
+    a cache if needed, this command can be used to manually update the cache when 
+    you've added new albums to your Spotify library.
+    """
+    cache_dir = config.user_cache_dir()
+    
+    with spotify.create_spotify_client(cache_dir) as sp:
+        refresh_album_cache(ctx, sp, max_workers=max_workers)
+
+
+def handle_year_filter(ctx, albums_by_year, year, count):
     """Handle filtering and selecting albums by year."""
     # Convert integer year parameter to string for dictionary lookup
     year_str = str(year)
     matching_album_dicts = albums_by_year.get(year_str, [])
 
     if not matching_album_dicts:
-        echo_verbose(ctx, f"No albums from {year} found in your library.")
+        echo_always(f"No albums from {year} found in your library.")
         return
 
     from spotify_tools.types import Album
@@ -139,12 +175,27 @@ def handle_year_filter(ctx, sp, albums_by_year, year, count):
         output_album(ctx, alb)
 
 
-def handle_simple_random_selection(ctx, sp, count):
-    """Handle random album selection without year filter."""
-    albums = album.get_random_albums_by_index(sp, count)
-
-    for alb in albums:
-        output_album(ctx, alb)
+def handle_simple_random_selection(ctx, albums_by_year, count):
+    """Handle random album selection without year filter using the provided cache data.
+    
+    Args:
+        ctx: Click context.
+        albums_by_year: Dictionary of albums organized by year.
+        count: Number of albums to select.
+    """
+    echo_debug(ctx, f"Selecting {count} random albums from all years")
+    
+    # Flatten all albums into a single list
+    all_albums = []
+    for year_albums in albums_by_year.values():
+        all_albums.extend([album.Album(**a) for a in year_albums])
+    
+    if all_albums:
+        selected_albums = album.select_random_albums(all_albums, count)
+        for alb in selected_albums:
+            output_album(ctx, alb)
+    else:
+        echo_always("No albums found in your library.")
 
 
 def output_album(ctx, alb):
@@ -172,7 +223,7 @@ def list_years(ctx):
 
     if cache_data is None:
         echo_always(
-            "No album cache found. Run 'spt random-album --refresh' to create one."
+            "No album cache found. Run 'spt refresh-cache' to create one."
         )
         return
 
