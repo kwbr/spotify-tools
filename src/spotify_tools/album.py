@@ -42,43 +42,43 @@ def fetch_all_albums_parallel(sp, progress_callback=None, max_workers=5):
     albums_lock = threading.Lock()  # Lock for thread safety
     total_albums = get_total_album_count(sp)
     batch_size = 50  # Spotify API limit
-    
+
     # Calculate offsets for all batches
     offsets = list(range(0, total_albums, batch_size))
     total_batches = len(offsets)
     completed_batches = 0
-    
+
     # Create a partial function for fetching a batch with specified offset
     def fetch_batch(offset):
         nonlocal completed_batches
         batch = sp.current_user_saved_albums(limit=batch_size, offset=offset)
-        
+
         # Thread-safe update of the shared dictionary
         with albums_lock:
             process_album_batch(batch, albums_by_year)
-        
+
         # Thread-safe progress update
         with albums_lock:
             completed_batches += 1
             if progress_callback:
                 progress_value = min(completed_batches * batch_size, total_albums)
                 progress_callback(progress_value, total_albums)
-        
+
         return True
 
     # Use ThreadPoolExecutor to limit concurrent requests
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit all batches to the executor
         futures = [executor.submit(fetch_batch, offset) for offset in offsets]
-        
+
         # Wait for all futures to complete
         concurrent.futures.wait(futures)
-    
+
     # Check for any exceptions
     for future in futures:
         if future.exception():
             raise future.exception()
-    
+
     # Save to cache
     cache.save_albums(albums_by_year)
     return albums_by_year
@@ -95,7 +95,7 @@ def process_album_batch(batch, albums_by_year):
     for item in batch["items"]:
         # Create Album object
         album = Album.from_spotify_response(item)
-        
+
         # Extract year from release date
         album_year = extract_year_from_date(item["album"]["release_date"])
         year_str = str(album_year)
@@ -143,7 +143,7 @@ def get_random_indexes(total, count):
 def fetch_single_album(sp, index):
     """
     Fetch a single album by index.
-    
+
     Returns:
         dict: The full album item from the API
     """
@@ -182,14 +182,16 @@ def get_albums_by_year(sp, year, count=None, from_cache=True):
     cache_data = cache.load_albums() if from_cache else None
 
     if cache_data is None:
-        albums_by_year = fetch_all_albums_parallel(sp)  # Use parallel fetching by default
+        albums_by_year = fetch_all_albums_parallel(
+            sp
+        )  # Use parallel fetching by default
     else:
         albums_by_year = cache_data["albums_by_year"]
 
     # Convert year to string for dictionary lookup
     year_str = str(year)
     matching_album_dicts = albums_by_year.get(year_str, [])
-    
+
     # Convert dictionaries to Album objects
     matching_albums = [Album(**album_dict) for album_dict in matching_album_dicts]
 

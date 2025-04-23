@@ -9,6 +9,7 @@ from . import album, cache, config, spotify
 
 # CLI Setup and Output Functions
 
+
 @click.group()
 @click.option(
     "--verbose", "-v", count=True, help="Increase verbosity (can use multiple times)"
@@ -49,6 +50,7 @@ def create_progress_callback(progress_bar):
 
 # CLI Commands
 
+
 @cli.command()
 @click.option("--count", default=1, help="Number of albums.")
 @click.option("--year", type=int, help="Filter albums by release year.")
@@ -78,7 +80,7 @@ def handle_year_or_refresh_option(ctx, sp, year, count, refresh):
     """Handle when year filter or refresh is specified."""
     # Set up worker count before creating progress bar
     max_workers = ctx.obj.get("MAX_WORKERS", 5)
-    
+
     # Try to load from cache first unless refresh is requested
     if refresh:
         echo_debug(ctx, "Bypassing cache due to refresh request")
@@ -94,18 +96,16 @@ def handle_year_or_refresh_option(ctx, sp, year, count, refresh):
     else:
         # Log parallel fetching information before progress bar
         echo_verbose(ctx, f"Using parallel fetching with {max_workers} workers")
-        
+
         # Create progress bar for fetching albums
         with click.progressbar(
             length=album.get_total_album_count(sp),
             label="Fetching and organizing all albums",
         ) as bar:
             progress_callback = create_progress_callback(bar)
-            
+
             albums_by_year = album.fetch_all_albums_parallel(
-                sp, 
-                progress_callback, 
-                max_workers=max_workers
+                sp, progress_callback, max_workers=max_workers
             )
 
     # Handle year filter if specified
@@ -115,6 +115,7 @@ def handle_year_or_refresh_option(ctx, sp, year, count, refresh):
         # Just report cache refresh
         total_albums = album.count_total_albums(albums_by_year)
         echo_verbose(ctx, f"Album database refreshed with {total_albums} albums.")
+
 
 def handle_year_filter(ctx, sp, albums_by_year, year, count):
     """Handle filtering and selecting albums by year."""
@@ -127,14 +128,16 @@ def handle_year_filter(ctx, sp, albums_by_year, year, count):
         return
 
     from spotify_tools.types import Album
+
     matching_albums = [Album(**album_dict) for album_dict in matching_album_dicts]
-    
+
     echo_verbose(ctx, f"Found {len(matching_albums)} albums from {year}.")
 
     # Select and display random albums
     selected_albums = album.select_random_albums(matching_albums, count)
     for alb in selected_albums:
         output_album(ctx, alb)
+
 
 def handle_simple_random_selection(ctx, sp, count):
     """Handle random album selection without year filter."""
@@ -147,7 +150,7 @@ def handle_simple_random_selection(ctx, sp, count):
 def output_album(ctx, alb):
     """
     Output album based on verbosity level.
-    
+
     Args:
         ctx: Click context.
         alb: Album object.
@@ -159,6 +162,7 @@ def output_album(ctx, alb):
     if ctx.obj["VERBOSE"] >= 1:
         artists_str = alb.format_artists()
         echo_verbose(ctx, f"Album: {alb.name} by {artists_str}")
+
 
 @cli.command()
 @click.pass_context
