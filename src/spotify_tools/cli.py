@@ -7,10 +7,7 @@ import click
 from . import album, cache, config, spotify
 
 
-###===================================================================
-### CLI Setup and Output Functions
-###===================================================================
-
+# CLI Setup and Output Functions
 
 @click.group()
 @click.option(
@@ -50,10 +47,7 @@ def create_progress_callback(progress_bar):
     return update_progress
 
 
-###===================================================================
-### CLI Commands
-###===================================================================
-
+# CLI Commands
 
 @cli.command()
 @click.option("--count", default=1, help="Number of albums.")
