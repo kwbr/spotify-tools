@@ -4,4 +4,4 @@ Spotify Tools - Collection of helpers to enhance music listening experience with
 
 from .types import Album
 
-__version__ = "0.6"
+__version__ = "0.7"
