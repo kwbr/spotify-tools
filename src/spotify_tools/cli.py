@@ -163,8 +163,6 @@ def handle_year_filter(ctx, albums_by_year, year, count):
         echo_always(f"No albums from {year} found in your library.")
         return
 
-    from spotify_tools.types import Album
-
     matching_albums = [Album(**album_dict) for album_dict in matching_album_dicts]
 
     echo_verbose(ctx, f"Found {len(matching_albums)} albums from {year}.")
