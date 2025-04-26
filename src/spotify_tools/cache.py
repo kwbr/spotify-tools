@@ -40,7 +40,7 @@ def _create_cache_data(albums_by_year):
 
 def _write_json_to_file(path, data):
     """Write JSON data to a file."""
-    with open(path, "w") as f:
+    with Path.open(path, "w") as f:
         json.dump(data, f)
 
 
@@ -61,7 +61,7 @@ def load_albums():
 def _load_json_with_error_handling(path):
     """Load JSON from file with error handling."""
     try:
-        with open(path, "r") as f:
+        with Path.open(path, "r") as f:
             return json.load(f)
     except json.JSONDecodeError:
         return None

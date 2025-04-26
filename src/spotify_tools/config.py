@@ -4,9 +4,8 @@ Configuration management for Spotify tools.
 
 import os
 import sys
-from pathlib import Path
-
 import tomllib
+from pathlib import Path
 
 
 def user_cache_dir():

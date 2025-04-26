@@ -7,7 +7,6 @@ import click
 from . import album, cache, config, spotify
 from .types import Album
 
-
 # CLI Setup and Output Functions
 
 
@@ -239,9 +238,9 @@ def display_albums(albums_by_year, years):
     for year in years:
         year_str = str(year)
         albums = [Album(**album_dict) for album_dict in albums_by_year[year_str]]
-        for album in albums:
-            artists_str = album.format_artists()
-            echo_always(f"{album.uri}: {album.name} by {artists_str} ({year})")
+        for alb in albums:
+            artists_str = alb.format_artists()
+            echo_always(f"{alb.uri}: {alb.name} by {artists_str} ({year})")
 
 
 def display_albums_by_year(albums_by_year, years):

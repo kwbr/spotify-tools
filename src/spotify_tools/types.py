@@ -3,7 +3,7 @@ Type definitions for album data.
 """
 
 from dataclasses import dataclass
-from typing import List, Dict, Any
+from typing import Any
 
 
 @dataclass
@@ -14,11 +14,11 @@ class Album:
 
     uri: str
     name: str
-    artists: List[str]
+    artists: list[str]
     added_at: str
 
     @classmethod
-    def from_spotify_response(cls, item: Dict[str, Any]) -> "Album":
+    def from_spotify_response(cls, item: dict[str, Any]) -> "Album":
         """
         Create an Album instance from a Spotify API response item.
 
@@ -36,12 +36,12 @@ class Album:
             added_at=item["added_at"],
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """
         Convert the album to a dictionary for storage or serialization.
 
         Returns:
-            Dict: Dictionary representation of the album.
+            dict: Dictionary representation of the album.
         """
         return {
             "uri": self.uri,

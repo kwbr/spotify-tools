@@ -1,5 +1,6 @@
 """
-Spotify Tools - Collection of helpers to enhance music listening experience with Spotify.
+Spotify Tools - Collection of helpers to enhance music
+listening experience with Spotify.
 """
 
 import importlib.metadata

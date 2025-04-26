@@ -2,11 +2,10 @@
 Album module implementation using the Album type.
 """
 
+import concurrent.futures
 import random
 import secrets
 import threading
-import concurrent.futures
-from functools import partial
 
 from . import cache
 from .types import Album
@@ -45,7 +44,6 @@ def fetch_all_albums_parallel(sp, progress_callback=None, max_workers=5):
 
     # Calculate offsets for all batches
     offsets = list(range(0, total_albums, batch_size))
-    total_batches = len(offsets)
     completed_batches = 0
 
     # Create a partial function for fetching a batch with specified offset
@@ -172,4 +170,4 @@ def count_total_albums(albums_by_year):
 
 def get_sorted_years(albums_by_year):
     """Get a sorted list of years from the albums dictionary."""
-    return sorted([int(year) for year in albums_by_year.keys()])
+    return sorted([int(year) for year in albums_by_year])
