@@ -74,8 +74,9 @@ def fetch_all_albums_parallel(sp, progress_callback=None, max_workers=5):
 
     # Check for any exceptions
     for future in futures:
-        if future.exception():
-            raise future.exception()
+        exception = future.exception()
+        if exception:
+            raise exception
 
     # Save to cache
     cache.save_albums(albums_by_year)
