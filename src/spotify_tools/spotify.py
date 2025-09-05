@@ -27,7 +27,10 @@ class SpotifyClient:
 
         self.client = spotipy.Spotify(
             auth_manager=SpotifyOAuth(
-                scope="user-library-read",
+                # Required scopes:
+                # user-library-read: Access user's saved albums for random selection
+                # playlist-modify-private: Create and modify playlists via create-playlist command
+                scope="user-library-read playlist-modify-private",
                 client_id=conf["client_id"],
                 client_secret=conf["client_secret"],
                 redirect_uri=conf["redirect_uri"],
