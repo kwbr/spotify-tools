@@ -198,7 +198,7 @@ wheels = [
 
 [[package]]
 name = "spotify-tools"
-version = "0.10"
+version = "0.11"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
