@@ -3,15 +3,17 @@ Album module implementation using the Album type.
 """
 
 import concurrent.futures
+import json
 import random
 import secrets
 import threading
+from typing import Dict, List, Optional, Any
 
-from . import cache
+from . import cache, database
 from .types import Album
 
 
-def get_total_album_count(sp):
+def get_total_album_count(sp) -> int:
     """
     Get the total number of albums in the user's library.
 
@@ -164,11 +166,58 @@ def select_random_albums(albums, count):
     return random.sample(albums, min(count, len(albums)))
 
 
-def count_total_albums(albums_by_year):
-    """Count the total number of albums across all years."""
+def get_random_albums(count: int, year: Optional[int] = None) -> List[Album]:
+    """
+    Get random albums efficiently using the SQLite database.
+
+    This is the preferred method for getting random albums when
+    the SQLite database is available.
+
+    Args:
+        count: Number of albums to select.
+        year: Optional year filter.
+
+    Returns:
+        list: List of randomly selected Album objects.
+    """
+    return database.get_random_albums(count, year)
+
+
+def get_albums_by_year(year: int) -> List[Album]:
+    """
+    Get all albums for a specific year using the SQLite database.
+
+    Args:
+        year: Year to filter by.
+
+    Returns:
+        list: List of Album objects for the specified year.
+    """
+    return database.get_albums_by_year(year)
+
+
+def count_total_albums(albums_by_year=None):
+    """Count the total number of albums across all years.
+
+    Args:
+        albums_by_year: Optional dictionary of albums organized by year.
+        If None, gets the count from the database.
+
+    Returns:
+        int: Total number of albums.
+    """
+    if albums_by_year is None:
+        # Get the count from the database
+        return database.get_album_count()
+
+    # We have actual album data
     return sum(len(albums) for albums in albums_by_year.values())
 
 
-def get_sorted_years(albums_by_year):
-    """Get a sorted list of years from the albums dictionary."""
-    return sorted([int(year) for year in albums_by_year])
+def get_sorted_years():
+    """Get a sorted list of years from the database.
+
+    Returns:
+        list: Sorted list of years.
+    """
+    return database.get_years()
