@@ -50,6 +50,26 @@ class Album:
             "added_at": self.added_at,
         }
 
+    @classmethod
+    def from_uri_only(cls, uri: str) -> "Album":
+        """
+        Create a minimal Album instance from just a URI.
+
+        This is used for performance optimization when only the URI is needed.
+
+        Args:
+            uri: Spotify URI for the album.
+
+        Returns:
+            Album: Minimal album representation.
+        """
+        return cls(
+            uri=uri,
+            name="",  # Empty placeholder
+            artists=[],  # Empty artist list
+            added_at="",  # Empty placeholder
+        )
+
     def format_artists(self) -> str:
         """
         Format the list of artists as a comma-separated string.

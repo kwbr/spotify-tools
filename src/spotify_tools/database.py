@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any, Tuple
 
 from .types import Album
+from . import perf
 
 
 def get_db_path() -> Path:
@@ -227,13 +228,16 @@ def get_albums_by_year(year: int) -> List[Album]:
         return albums
 
 
-def get_random_albums(count: int, year: Optional[int] = None) -> List[Album]:
+def get_random_albums(
+    count: int, year: Optional[int] = None, verbose: bool = False
+) -> List[Album]:
     """
     Get random albums, optionally filtered by year.
 
     Args:
         count: Number of albums to return.
         year: Optional year filter.
+        verbose: If True, fetch all album data. If False (default), optimize for URI-only.
 
     Returns:
         List[Album]: List of random Album objects.
@@ -242,32 +246,74 @@ def get_random_albums(count: int, year: Optional[int] = None) -> List[Album]:
         return []
 
     with get_db_connection() as conn:
-        query = "SELECT uri, name, artists_json, added_at FROM albums"
         params = []
+        where_clause = ""
 
         if year is not None:
-            query += " WHERE year = ?"
+            where_clause = "WHERE year = ?"
             params.append(year)
 
-        # Add random selection and limit
-        query += " ORDER BY RANDOM() LIMIT ?"
-        params.append(count)
+        # Only fetch URI if not in verbose mode (huge performance optimization)
+        if not verbose:
+            # Simplified query that only retrieves URIs
+            query = f"""SELECT uri FROM albums 
+                      {where_clause} ORDER BY RANDOM() LIMIT ?"""
+            params.append(count)
 
-        cursor = conn.execute(query, params)
+            with perf.measure_time("Execute optimized URI-only query"):
+                cursor = conn.execute(query, params)
+                rows = cursor.fetchall()
 
-        albums = []
-        for row in cursor.fetchall():
-            uri, name, artists_json, added_at = row
-            albums.append(
-                Album(
-                    uri=uri,
-                    name=name,
-                    artists=json.loads(artists_json),
-                    added_at=added_at,
-                )
+            albums = []
+            for row in rows:
+                albums.append(Album.from_uri_only(row[0]))
+
+            return albums
+        else:
+            # Full query with all fields when in verbose mode
+            query = f"""
+            WITH album_data AS (
+                SELECT 
+                    uri, 
+                    name, 
+                    artists_json,
+                    added_at 
+                FROM albums
+                {where_clause}
+                ORDER BY RANDOM() 
+                LIMIT ?
             )
+            SELECT 
+                uri, 
+                name, 
+                json_extract(artists_json, '$') AS artists_array,
+                added_at 
+            FROM album_data
+            """
 
-        return albums
+            params.append(count)
+
+            with perf.measure_time("Execute full query with JSON"):
+                cursor = conn.execute(query, params)
+                rows = cursor.fetchall()
+
+            albums = []
+            with perf.measure_time("Process query results"):
+                for row in rows:
+                    uri, name, artists_array, added_at = row
+                    # SQLite returns JSON as a string that's already parsed by the json_extract function
+                    albums.append(
+                        Album(
+                            uri=uri,
+                            name=name,
+                            artists=json.loads(
+                                artists_array
+                            ),  # Still need to parse the extracted JSON array
+                            added_at=added_at,
+                        )
+                    )
+
+            return albums
 
 
 def get_years() -> List[int]:

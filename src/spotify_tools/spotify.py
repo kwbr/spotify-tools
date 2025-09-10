@@ -29,9 +29,9 @@ class SpotifyClient:
             auth_manager=SpotifyOAuth(
                 scope=(
                     # Access user's saved albums for random selection
-                    "user-library-read"
+                    "user-library-read",
                     # Create and modify playlists via create-playlist command
-                    "playlist-modify-private"
+                    "playlist-modify-private",
                 ),
                 client_id=conf["client_id"],
                 client_secret=conf["client_secret"],

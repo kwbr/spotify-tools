@@ -10,7 +10,7 @@ from .configure import configure
 
 __all__ = [
     "random_album",
-    "refresh_cache", 
+    "refresh_cache",
     "list_albums",
     "create_playlist",
     "configure",

@@ -4,7 +4,7 @@ Random album command for Spotify tools CLI.
 
 import click
 
-from .. import album, cache, config, database, spotify
+from .. import album, cache, config, database, spotify, perf
 from ..cli_utils import (
     echo_always,
     echo_debug,
@@ -17,8 +17,14 @@ from ..cli_utils import (
 @click.command()
 @click.option("--count", default=1, help="Number of albums.")
 @click.option("--year", type=int, help="Filter albums by release year.")
+@click.option("--timing", is_flag=True, help="Show timing information.")
 @click.pass_context
-def random_album(ctx, count, year):
+def random_album(ctx, count, year, timing):
+    # Configure timing output
+    if not timing:
+        # Monkey patch the measure_time context manager to do nothing
+        perf.measure_time_original = perf.measure_time
+        perf.measure_time = lambda name="Operation": perf.silent_timer(name)
     """Get random album from user's Library.
 
     Returns random albums of the user's Library. Spotify lacks a randomization
@@ -94,14 +100,19 @@ def refresh_album_cache(ctx, sp, max_workers=5, show_progress=True):
 def handle_year_filter_sql(ctx, year, count):
     """Handle filtering and selecting albums by year using SQLite."""
     # Use SQLite's ORDER BY RANDOM() directly for efficient random selection
-    selected_albums = album.get_random_albums(count, year)
-    
+    # Pass verbosity level to optimize the query
+    verbose = ctx.obj["VERBOSE"] >= 1
+    with perf.measure_time(
+        f"get_random_albums(count={count}, year={year}, verbose={verbose})"
+    ):
+        selected_albums = album.get_random_albums(count, year, verbose)
+
     if not selected_albums:
         echo_always(f"No albums from {year} found in your library.")
         return
-        
+
     echo_verbose(ctx, f"Selected {len(selected_albums)} albums from {year}.")
-    
+
     # Output selected albums
     for alb in selected_albums:
         output_album(ctx, alb)
@@ -112,7 +123,10 @@ def handle_random_selection_sql(ctx, count):
     echo_debug(ctx, f"Selecting {count} random albums from all years using SQL")
 
     # Get random albums directly from the database
-    selected_albums = album.get_random_albums(count)
+    # Pass verbosity level to optimize the query
+    verbose = ctx.obj["VERBOSE"] >= 1
+    with perf.measure_time(f"get_random_albums(count={count}, verbose={verbose})"):
+        selected_albums = album.get_random_albums(count, verbose=verbose)
 
     if selected_albums:
         for alb in selected_albums:

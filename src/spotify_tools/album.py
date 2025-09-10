@@ -166,7 +166,9 @@ def select_random_albums(albums, count):
     return random.sample(albums, min(count, len(albums)))
 
 
-def get_random_albums(count: int, year: Optional[int] = None) -> List[Album]:
+def get_random_albums(
+    count: int, year: Optional[int] = None, verbose: bool = False
+) -> List[Album]:
     """
     Get random albums efficiently using the SQLite database.
 
@@ -176,11 +178,12 @@ def get_random_albums(count: int, year: Optional[int] = None) -> List[Album]:
     Args:
         count: Number of albums to select.
         year: Optional year filter.
+        verbose: If True, fetch all album data. If False (default), optimize for URI-only.
 
     Returns:
         list: List of randomly selected Album objects.
     """
-    return database.get_random_albums(count, year)
+    return database.get_random_albums(count, year, verbose)
 
 
 def get_albums_by_year(year: int) -> List[Album]:
