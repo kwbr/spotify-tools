@@ -18,15 +18,15 @@ def list_albums(ctx, count_by_year):
     if cache_data is None:
         echo_always("No album cache found. Run 'spt refresh-cache' to create one.")
         return
-        
+
     # Use the album counts from cache_data (no redundant query)
     album_counts = cache_data["album_counts"]
     total_albums = sum(album_counts.values())
     years = sorted(album_counts.keys())
-    
+
     # Always show album counts by year - no need for different paths
     echo_always(f"Total albums in library: {total_albums}\n")
     echo_always("Albums by year:")
-    
+
     for year in years:
         echo_always(f"{year}: {album_counts[year]} albums")
