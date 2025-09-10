@@ -20,11 +20,6 @@ from ..cli_utils import (
 @click.option("--timing", is_flag=True, help="Show timing information.")
 @click.pass_context
 def random_album(ctx, count, year, timing):
-    # Configure timing output
-    if not timing:
-        # Monkey patch the measure_time context manager to do nothing
-        perf.measure_time_original = perf.measure_time
-        perf.measure_time = lambda name="Operation": perf.silent_timer(name)
     """Get random album from user's Library.
 
     Returns random albums of the user's Library. Spotify lacks a randomization
@@ -36,6 +31,11 @@ def random_album(ctx, count, year, timing):
 
     Inspired by https://shuffle.ninja/
     """
+    # Configure timing output
+    if not timing:
+        # Monkey patch the measure_time context manager to do nothing
+        perf.measure_time_original = perf.measure_time
+        perf.measure_time = lambda name="Operation": perf.silent_timer(name)
     # Check if we have a cache first
     cache_data = cache.load_albums()
 
@@ -50,16 +50,11 @@ def random_album(ctx, count, year, timing):
         else:
             handle_random_selection_sql(ctx, count)
     else:
-        # No cache available, need to build one (requires Spotify client)
+        # No cache available, exit with error
         echo_always(
-            "No album cache found. Building cache now (this may take a while)..."
+            "Error: No album cache found. Please run 'spt refresh-cache' first."
         )
-        cache_dir = config.user_cache_dir()
-        with spotify.create_spotify_client(cache_dir) as sp:
-            refresh_album_cache(ctx, sp, max_workers=ctx.obj.get("MAX_WORKERS", 5))
-
-        # Now that we have a cache, try again with recursive call
-        random_album(ctx, count, year)
+        raise click.Abort()
 
 
 def refresh_album_cache(ctx, sp, max_workers=5, show_progress=True):
