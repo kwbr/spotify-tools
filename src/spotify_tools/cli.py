@@ -6,7 +6,7 @@ from pathlib import Path
 
 import click
 
-from . import album, cache, config, playlist, spotify
+from . import album, cache, config, database, playlist, spotify
 from .types import Album
 
 # CLI Setup and Output Functions
@@ -100,9 +100,13 @@ def random_album(ctx, count, year):
     if cache_data is not None:
         # Use existing cache
         echo_debug(ctx, "Using existing album cache")
-        days, hours = cache.calculate_cache_age(cache_data["timestamp"])
+        days, hours = cache.calculate_cache_age()
         echo_verbose(ctx, cache.format_cache_age_message(days, hours))
-        albums_by_year = cache_data["albums_by_year"]
+
+        if year is not None:
+            handle_year_filter_sql(ctx, year, count)
+        else:
+            handle_random_selection_sql(ctx, count)
     else:
         # No cache available, need to build one (requires Spotify client)
         echo_always(
@@ -110,31 +114,21 @@ def random_album(ctx, count, year):
         )
         cache_dir = config.user_cache_dir()
         with spotify.create_spotify_client(cache_dir) as sp:
-            albums_by_year = refresh_album_cache(
-                ctx, sp, max_workers=ctx.obj.get("MAX_WORKERS", 5)
-            )
+            refresh_album_cache(ctx, sp, max_workers=ctx.obj.get("MAX_WORKERS", 5))
 
-    # Now handle the album selection using the cache
-    if year is not None:
-        # Filter by year
-        handle_year_filter(ctx, albums_by_year, year, count)
-    else:
-        # No filter, get random albums from all years
-        handle_simple_random_selection(ctx, albums_by_year, count)
+        # Now that we have a cache, try again with recursive call
+        random_album(ctx, count, year)
 
 
 def refresh_album_cache(ctx, sp, max_workers=5, show_progress=True):
     """
-    Refresh the album cache and return the albums by year.
+    Refresh the album cache.
 
     Args:
         ctx: Click context.
         sp: Spotify client.
         max_workers: Maximum number of parallel workers.
         show_progress: Whether to show a progress bar.
-
-    Returns:
-        dict: Albums organized by year.
     """
     echo_verbose(ctx, f"Using parallel fetching with {max_workers} workers")
 
@@ -155,10 +149,10 @@ def refresh_album_cache(ctx, sp, max_workers=5, show_progress=True):
         albums_by_year = album.fetch_all_albums_parallel(sp, max_workers=max_workers)
 
     # Report cache refresh
-    total_albums = album.count_total_albums(albums_by_year)
+    total_albums = database.get_album_count()
     echo_always(f"Album database refreshed with {total_albums} albums.")
 
-    return albums_by_year
+    # Don't need to return anything, we're saving directly to the database
 
 
 @cli.command(name="refresh-cache")
@@ -171,6 +165,8 @@ def refresh_cache(ctx, max_workers):
     from your Spotify library. While the random-album command will automatically create
     a cache if needed, this command can be used to manually update the cache when
     you've added new albums to your Spotify library.
+
+    The cache is stored in a SQLite database for efficient access.
     """
     cache_dir = config.user_cache_dir()
 
@@ -178,43 +174,30 @@ def refresh_cache(ctx, max_workers):
         refresh_album_cache(ctx, sp, max_workers=max_workers)
 
 
-def handle_year_filter(ctx, albums_by_year, year, count):
-    """Handle filtering and selecting albums by year."""
-    # Convert integer year parameter to string for dictionary lookup
-    year_str = str(year)
-    matching_album_dicts = albums_by_year.get(year_str, [])
-
-    if not matching_album_dicts:
+def handle_year_filter_sql(ctx, year, count):
+    """Handle filtering and selecting albums by year using SQLite."""
+    # Use SQLite's ORDER BY RANDOM() directly for efficient random selection
+    selected_albums = album.get_random_albums(count, year)
+    
+    if not selected_albums:
         echo_always(f"No albums from {year} found in your library.")
         return
-
-    matching_albums = [Album(**album_dict) for album_dict in matching_album_dicts]
-
-    echo_verbose(ctx, f"Found {len(matching_albums)} albums from {year}.")
-
-    # Select and display random albums
-    selected_albums = album.select_random_albums(matching_albums, count)
+        
+    echo_verbose(ctx, f"Selected {len(selected_albums)} albums from {year}.")
+    
+    # Output selected albums
     for alb in selected_albums:
         output_album(ctx, alb)
 
 
-def handle_simple_random_selection(ctx, albums_by_year, count):
-    """Handle random album selection without year filter using the provided cache data.
+def handle_random_selection_sql(ctx, count):
+    """Handle random album selection without year filter using SQLite."""
+    echo_debug(ctx, f"Selecting {count} random albums from all years using SQL")
 
-    Args:
-        ctx: Click context.
-        albums_by_year: Dictionary of albums organized by year.
-        count: Number of albums to select.
-    """
-    echo_debug(ctx, f"Selecting {count} random albums from all years")
+    # Get random albums directly from the database
+    selected_albums = album.get_random_albums(count)
 
-    # Flatten all albums into a single list
-    all_albums = []
-    for year_albums in albums_by_year.values():
-        all_albums.extend([album.Album(**a) for a in year_albums])
-
-    if all_albums:
-        selected_albums = album.select_random_albums(all_albums, count)
+    if selected_albums:
         for alb in selected_albums:
             output_album(ctx, alb)
     else:
@@ -248,34 +231,18 @@ def list_albums(ctx, count_by_year):
     if cache_data is None:
         echo_always("No album cache found. Run 'spt refresh-cache' to create one.")
         return
-
-    albums_by_year = cache_data["albums_by_year"]
-    years = album.get_sorted_years(albums_by_year)
-
-    if count_by_year:
-        total_albums = album.count_total_albums(albums_by_year)
-        echo_always(f"Total albums in library: {total_albums}\n")
-        echo_always("Albums by year:")
-        display_albums_by_year(albums_by_year, years)
-    else:
-        display_albums(albums_by_year, years)
-
-
-def display_albums(albums_by_year, years):
+        
+    # Use the album counts from cache_data (no redundant query)
+    album_counts = cache_data["album_counts"]
+    total_albums = sum(album_counts.values())
+    years = sorted(album_counts.keys())
+    
+    # Always show album counts by year - no need for different paths
+    echo_always(f"Total albums in library: {total_albums}\n")
+    echo_always("Albums by year:")
+    
     for year in years:
-        year_str = str(year)
-        albums = [Album(**album_dict) for album_dict in albums_by_year[year_str]]
-        for alb in albums:
-            artists_str = alb.format_artists()
-            echo_always(f"{alb.uri}: {alb.name} by {artists_str} ({year})")
-
-
-def display_albums_by_year(albums_by_year, years):
-    """Display album counts by year."""
-    for year in years:
-        year_str = str(year)
-        count = len(albums_by_year[year_str])
-        echo_always(f"{year}: {count} albums")
+        echo_always(f"{year}: {album_counts[year]} albums")
 
 
 @cli.command(name="create-playlist")
