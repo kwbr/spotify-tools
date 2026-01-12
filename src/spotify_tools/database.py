@@ -531,31 +531,35 @@ def save_play_history(plays: list[dict[str, Any]], db_path: Path | None = None) 
     return added_count
 
 
-def get_last_sync_time() -> str | None:
+def get_last_sync_time(db_path: Path | None = None) -> str | None:
     """
     Get the timestamp of the last play history sync.
+
+    Args:
+        db_path: Optional database path for testing.
 
     Returns:
         str | None: ISO timestamp of last sync, or None if never synced.
     """
-    if not database_exists():
+    if not database_exists(db_path=db_path):
         return None
 
-    with get_db_connection() as conn:
+    with get_db_connection(db_path=db_path) as conn:
         return get_metadata(conn, "last_play_history_sync")
 
 
-def set_last_sync_time(timestamp: str) -> None:
+def set_last_sync_time(timestamp: str, db_path: Path | None = None) -> None:
     """
     Set the timestamp of the last play history sync.
 
     Args:
         timestamp: ISO timestamp string.
+        db_path: Optional database path for testing.
     """
-    if not database_exists():
-        initialize_db()
+    if not database_exists(db_path=db_path):
+        initialize_db(db_path=db_path)
 
-    with get_db_connection() as conn:
+    with get_db_connection(db_path=db_path) as conn:
         set_metadata(conn, "last_play_history_sync", timestamp)
 
 
@@ -903,13 +907,14 @@ def get_syncs_dir() -> Path:
     return syncs_dir
 
 
-def save_raw_sync(plays: list[dict[str, Any]], timestamp: str) -> Path:
+def save_raw_sync(plays: list[dict[str, Any]], timestamp: str, db_path: Path | None = None) -> Path:
     """
     Save raw sync data to a JSON file.
 
     Args:
         plays: List of play dictionaries.
         timestamp: ISO timestamp for the sync.
+        db_path: Optional database path (not used, for consistency).
 
     Returns:
         Path: Path to the saved file.
