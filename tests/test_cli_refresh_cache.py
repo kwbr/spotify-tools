@@ -40,7 +40,13 @@ def test_refresh_cache_basic(mock_ctx, temp_db, mock_spotify_client):
         "next": None,
     }
 
-    refresh_album_cache(mock_ctx, mock_spotify_client, max_workers=5, show_progress=False, db_path=temp_db)
+    refresh_album_cache(
+        mock_ctx,
+        mock_spotify_client,
+        max_workers=5,
+        show_progress=False,
+        db_path=temp_db,
+    )
 
     mock_spotify_client.current_user_saved_albums.assert_called()
 
@@ -62,7 +68,13 @@ def test_refresh_cache_with_max_workers(mock_ctx, temp_db, mock_spotify_client):
         "next": None,
     }
 
-    refresh_album_cache(mock_ctx, mock_spotify_client, max_workers=10, show_progress=False, db_path=temp_db)
+    refresh_album_cache(
+        mock_ctx,
+        mock_spotify_client,
+        max_workers=10,
+        show_progress=False,
+        db_path=temp_db,
+    )
 
     mock_spotify_client.current_user_saved_albums.assert_called()
 
@@ -74,12 +86,20 @@ def test_refresh_cache_empty_library(mock_ctx, temp_db, mock_spotify_client):
         "next": None,
     }
 
-    refresh_album_cache(mock_ctx, mock_spotify_client, max_workers=5, show_progress=False, db_path=temp_db)
+    refresh_album_cache(
+        mock_ctx,
+        mock_spotify_client,
+        max_workers=5,
+        show_progress=False,
+        db_path=temp_db,
+    )
 
     mock_spotify_client.current_user_saved_albums.assert_called()
 
 
-def test_refresh_cache_updates_existing_database(mock_ctx, temp_db, mock_spotify_client):
+def test_refresh_cache_updates_existing_database(
+    mock_ctx, temp_db, mock_spotify_client
+):
     mock_spotify_client.current_user_saved_albums.return_value = {
         "total": 1,
         "items": [
@@ -96,7 +116,13 @@ def test_refresh_cache_updates_existing_database(mock_ctx, temp_db, mock_spotify
         "next": None,
     }
 
-    refresh_album_cache(mock_ctx, mock_spotify_client, max_workers=5, show_progress=False, db_path=temp_db)
+    refresh_album_cache(
+        mock_ctx,
+        mock_spotify_client,
+        max_workers=5,
+        show_progress=False,
+        db_path=temp_db,
+    )
 
     mock_spotify_client.current_user_saved_albums.assert_called()
 
@@ -137,6 +163,12 @@ def test_refresh_cache_with_pagination(mock_ctx, temp_db, mock_spotify_client):
 
     mock_spotify_client.next.return_value = page2
 
-    refresh_album_cache(mock_ctx, mock_spotify_client, max_workers=5, show_progress=False, db_path=temp_db)
+    refresh_album_cache(
+        mock_ctx,
+        mock_spotify_client,
+        max_workers=5,
+        show_progress=False,
+        db_path=temp_db,
+    )
 
     assert mock_spotify_client.current_user_saved_albums.call_count >= 1

@@ -3,8 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from spotify_tools import spotify
 
 
@@ -34,9 +32,10 @@ redirect_uri = "http://localhost:8888/callback"
 """
     )
 
-    with patch("spotify_tools.spotify.spotipy.Spotify") as mock_spotify, patch(
-        "spotify_tools.spotify.config.load_config"
-    ) as mock_load:
+    with (
+        patch("spotify_tools.spotify.spotipy.Spotify") as mock_spotify,
+        patch("spotify_tools.spotify.config.load_config") as mock_load,
+    ):
         mock_load.return_value = {
             "client_id": "test_id",
             "client_secret": "test_secret",
@@ -83,9 +82,10 @@ redirect_uri = "http://localhost:8888/callback"
 """
     )
 
-    with patch("spotify_tools.spotify.spotipy.Spotify") as mock_spotify, patch(
-        "spotify_tools.spotify.config.load_config"
-    ) as mock_load:
+    with (
+        patch("spotify_tools.spotify.spotipy.Spotify") as mock_spotify,
+        patch("spotify_tools.spotify.config.load_config") as mock_load,
+    ):
         mock_load.return_value = {
             "client_id": "test_id",
             "client_secret": "test_secret",
@@ -125,9 +125,10 @@ redirect_uri = "http://localhost:8888/callback"
 """
     )
 
-    with patch("spotify_tools.spotify.spotipy.Spotify") as mock_spotify, patch(
-        "spotify_tools.spotify.config.load_config"
-    ) as mock_load:
+    with (
+        patch("spotify_tools.spotify.spotipy.Spotify") as mock_spotify,
+        patch("spotify_tools.spotify.config.load_config") as mock_load,
+    ):
         mock_load.return_value = {
             "client_id": "test_id",
             "client_secret": "test_secret",

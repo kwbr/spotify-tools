@@ -34,7 +34,9 @@ def test_sync_history_with_tracks(mock_ctx, temp_db, mock_spotify_client):
         "next": None,
     }
 
-    result = sync_play_history_logic(mock_spotify_client, mock_ctx, limit=50, db_path=temp_db)
+    result = sync_play_history_logic(
+        mock_spotify_client, mock_ctx, limit=50, db_path=temp_db
+    )
 
     assert result["plays_synced"] == 1
     assert result["new_plays"] == 1
@@ -47,7 +49,9 @@ def test_sync_history_no_tracks(mock_ctx, temp_db, mock_spotify_client):
         "next": None,
     }
 
-    result = sync_play_history_logic(mock_spotify_client, mock_ctx, limit=50, db_path=temp_db)
+    result = sync_play_history_logic(
+        mock_spotify_client, mock_ctx, limit=50, db_path=temp_db
+    )
 
     assert result["plays_synced"] == 0
     assert result["new_plays"] == 0
@@ -60,7 +64,9 @@ def test_sync_history_with_limit(mock_ctx, temp_db, mock_spotify_client):
         "next": None,
     }
 
-    result = sync_play_history_logic(mock_spotify_client, mock_ctx, limit=10, db_path=temp_db)
+    result = sync_play_history_logic(
+        mock_spotify_client, mock_ctx, limit=10, db_path=temp_db
+    )
 
     assert result["plays_synced"] == 0
     mock_spotify_client.current_user_recently_played.assert_called_once()
@@ -74,7 +80,7 @@ def test_sync_history_max_limit(mock_ctx, temp_db, mock_spotify_client):
         "next": None,
     }
 
-    result = sync_play_history_logic(mock_spotify_client, mock_ctx, limit=100, db_path=temp_db)
+    sync_play_history_logic(mock_spotify_client, mock_ctx, limit=100, db_path=temp_db)
 
     # Should cap at 50
     call_kwargs = mock_spotify_client.current_user_recently_played.call_args[1]
@@ -114,7 +120,9 @@ def test_sync_history_multiple_tracks(mock_ctx, temp_db, mock_spotify_client):
         "next": None,
     }
 
-    result = sync_play_history_logic(mock_spotify_client, mock_ctx, limit=50, db_path=temp_db)
+    result = sync_play_history_logic(
+        mock_spotify_client, mock_ctx, limit=50, db_path=temp_db
+    )
 
     assert result["plays_synced"] == 2
     assert result["new_plays"] == 2

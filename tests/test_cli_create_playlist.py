@@ -3,7 +3,10 @@ from __future__ import annotations
 import click
 import pytest
 
-from spotify_tools.commands.create_playlist import create_playlist_logic, read_items_from_file
+from spotify_tools.commands.create_playlist import (
+    create_playlist_logic,
+    read_items_from_file,
+)
 
 
 @pytest.fixture
@@ -35,10 +38,7 @@ def test_create_playlist_dry_run_with_items(mock_ctx, mock_spotify_client):
     }
 
     result = create_playlist_logic(
-        mock_spotify_client,
-        mock_ctx,
-        ["Test Track"],
-        dry_run=True
+        mock_spotify_client, mock_ctx, ["Test Track"], dry_run=True
     )
 
     assert result["success"] is True
@@ -62,10 +62,7 @@ def test_create_playlist_with_track(mock_ctx, mock_spotify_client):
     mock_spotify_client.user_playlist_create.return_value = {"id": "playlist123"}
 
     result = create_playlist_logic(
-        mock_spotify_client,
-        mock_ctx,
-        ["track:Test Track"],
-        name="Test Playlist"
+        mock_spotify_client, mock_ctx, ["track:Test Track"], name="Test Playlist"
     )
 
     assert result["success"] is True
@@ -89,10 +86,7 @@ def test_create_playlist_with_name(mock_ctx, mock_spotify_client):
     mock_spotify_client.user_playlist_create.return_value = {"id": "playlist123"}
 
     result = create_playlist_logic(
-        mock_spotify_client,
-        mock_ctx,
-        ["Test Track"],
-        name="My Playlist"
+        mock_spotify_client, mock_ctx, ["Test Track"], name="My Playlist"
     )
 
     assert result["success"] is True
@@ -108,11 +102,7 @@ def test_create_playlist_with_uri(mock_ctx, mock_spotify_client):
     mock_spotify_client.current_user.return_value = {"id": "user123"}
     mock_spotify_client.user_playlist_create.return_value = {"id": "playlist123"}
 
-    result = create_playlist_logic(
-        mock_spotify_client,
-        mock_ctx,
-        ["spotify:track:1"]
-    )
+    result = create_playlist_logic(mock_spotify_client, mock_ctx, ["spotify:track:1"])
 
     assert result["success"] is True
     assert result["playlist_id"] == "playlist123"
@@ -137,7 +127,7 @@ def test_create_playlist_multiple_items(mock_ctx, mock_spotify_client):
         mock_spotify_client,
         mock_ctx,
         ["track:Track 1", "track:Track 2"],
-        name="Multi Playlist"
+        name="Multi Playlist",
     )
 
     assert result["success"] is True
@@ -169,11 +159,7 @@ def test_create_playlist_with_album(mock_ctx, mock_spotify_client):
     mock_spotify_client.current_user.return_value = {"id": "user123"}
     mock_spotify_client.user_playlist_create.return_value = {"id": "playlist123"}
 
-    result = create_playlist_logic(
-        mock_spotify_client,
-        mock_ctx,
-        ["album:Test Album"]
-    )
+    result = create_playlist_logic(mock_spotify_client, mock_ctx, ["album:Test Album"])
 
     assert result["success"] is True
     assert result["playlist_id"] == "playlist123"

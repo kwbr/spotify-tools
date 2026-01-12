@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 import json
-import sqlite3
-from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -23,6 +20,7 @@ def temp_cache_dir(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
 
     from spotify_tools import config
+
     cache_dir = config.user_cache_dir()
     cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -34,6 +32,7 @@ def temp_config_dir(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
 
     from spotify_tools import config
+
     config_dir = config.user_config_dir()
     config_dir.mkdir(parents=True, exist_ok=True)
 
@@ -247,5 +246,3 @@ redirect_uri = "http://localhost:8888/callback"
 """
     config_file.write_text(config_content)
     return config_file
-
-

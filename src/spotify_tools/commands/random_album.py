@@ -50,9 +50,7 @@ def random_album(ctx, count, year, timing):
             handle_random_selection_sql(ctx, count)
     else:
         # No cache available, exit with error
-        echo_info(
-            "Error: No album cache found. Please run 'spt refresh-cache' first."
-        )
+        echo_info("Error: No album cache found. Please run 'spt refresh-cache' first.")
         raise click.Abort()
 
 

@@ -67,7 +67,9 @@ def test_list_albums_year_2020_count(runner, temp_db):
     result = runner.invoke(cli, ["list-albums", "--year", "2020"])
 
     assert result.exit_code == 0
-    lines = [line for line in result.output.strip().split("\n") if "spotify:album:" in line]
+    lines = [
+        line for line in result.output.strip().split("\n") if "spotify:album:" in line
+    ]
     assert len(lines) == 2
 
 
@@ -75,7 +77,9 @@ def test_list_albums_year_2021_count(runner, temp_db):
     result = runner.invoke(cli, ["list-albums", "--year", "2021"])
 
     assert result.exit_code == 0
-    lines = [line for line in result.output.strip().split("\n") if "spotify:album:" in line]
+    lines = [
+        line for line in result.output.strip().split("\n") if "spotify:album:" in line
+    ]
     assert len(lines) == 3
 
 
@@ -104,7 +108,9 @@ def test_list_albums_year_with_no_albums(runner, temp_db):
     result = runner.invoke(cli, ["list-albums", "--year", "1999"])
 
     assert result.exit_code == 0
-    lines = [line for line in result.output.strip().split("\n") if "spotify:album:" in line]
+    lines = [
+        line for line in result.output.strip().split("\n") if "spotify:album:" in line
+    ]
     assert len(lines) == 0
 
 
@@ -112,5 +118,7 @@ def test_list_albums_year_and_sort(runner, temp_db):
     result = runner.invoke(cli, ["list-albums", "--year", "2021", "--sort", "name"])
 
     assert result.exit_code == 0
-    lines = [line for line in result.output.strip().split("\n") if "spotify:album:" in line]
+    lines = [
+        line for line in result.output.strip().split("\n") if "spotify:album:" in line
+    ]
     assert len(lines) == 3

@@ -44,7 +44,11 @@ def sync_play_history_logic(sp, ctx, limit, db_path=None):
 
     if not recently_played or "items" not in recently_played:
         echo_info("No recently played tracks found.")
-        return {"plays_synced": 0, "new_plays": 0, "total_plays": database.get_total_play_count(db_path=db_path)}
+        return {
+            "plays_synced": 0,
+            "new_plays": 0,
+            "total_plays": database.get_total_play_count(db_path=db_path),
+        }
 
     items = recently_played["items"]
     echo_verbose(ctx, f"Retrieved {len(items)} tracks")
@@ -94,10 +98,17 @@ def sync_play_history_logic(sp, ctx, limit, db_path=None):
         total_plays = database.get_total_play_count(db_path=db_path)
         echo_info(f"Total plays in database: {total_plays}")
 
-        return {"plays_synced": len(plays), "new_plays": added_count, "total_plays": total_plays}
-    else:
-        echo_info("No new tracks to sync")
-        return {"plays_synced": 0, "new_plays": 0, "total_plays": database.get_total_play_count(db_path=db_path)}
+        return {
+            "plays_synced": len(plays),
+            "new_plays": added_count,
+            "total_plays": total_plays,
+        }
+    echo_info("No new tracks to sync")
+    return {
+        "plays_synced": 0,
+        "new_plays": 0,
+        "total_plays": database.get_total_play_count(db_path=db_path),
+    }
 
 
 @click.command(name="sync-history")

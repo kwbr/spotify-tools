@@ -144,9 +144,7 @@ def show_top_tracks(limit: int, days: int | None):
         echo_info(f"Top {min(limit, len(track_stats))} Tracks (Last {days} Days):\n")
         for i, (uri, info) in enumerate(track_stats[:limit], 1):
             artists = ", ".join(info["artists"])
-            echo_info(
-                f"{i:3}. {info['name']} by {artists} - {info['count']} plays"
-            )
+            echo_info(f"{i:3}. {info['name']} by {artists} - {info['count']} plays")
     else:
         track_stats = database.get_play_count_by_track()
         if not track_stats:
@@ -171,9 +169,7 @@ def show_top_artists(limit: int, days: int | None):
         for play in plays:
             for artist in play["artists"]:
                 artist_counts[artist] = artist_counts.get(artist, 0) + 1
-        artist_stats = sorted(
-            artist_counts.items(), key=lambda x: x[1], reverse=True
-        )
+        artist_stats = sorted(artist_counts.items(), key=lambda x: x[1], reverse=True)
         echo_info(f"Top {min(limit, len(artist_stats))} Artists (Last {days} Days):\n")
         for i, (artist, count) in enumerate(artist_stats[:limit], 1):
             echo_info(f"{i:3}. {artist} - {count} plays")

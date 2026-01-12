@@ -80,7 +80,9 @@ class TestCalculateFuzzyWordSimilarity:
         assert similarity == 0.0
 
     def test_partial_word_match(self):
-        similarity = calculate_fuzzy_word_similarity("bohemian rhapsody", "bohemian rap")
+        similarity = calculate_fuzzy_word_similarity(
+            "bohemian rhapsody", "bohemian rap"
+        )
         assert 0.4 < similarity < 0.8
 
     def test_word_order_doesnt_matter(self):
@@ -536,9 +538,7 @@ class TestResolveItems:
 class TestCreatePlaylist:
     def test_create_playlist_from_tracks(self, mock_spotify_client):
         mock_spotify_client.current_user.return_value = {"id": "user123"}
-        mock_spotify_client.user_playlist_create.return_value = {
-            "id": "playlist123"
-        }
+        mock_spotify_client.user_playlist_create.return_value = {"id": "playlist123"}
 
         track = ResolvedTrack(
             uri="spotify:track:1",
@@ -557,9 +557,7 @@ class TestCreatePlaylist:
 
     def test_create_playlist_default_name(self, mock_spotify_client):
         mock_spotify_client.current_user.return_value = {"id": "user123"}
-        mock_spotify_client.user_playlist_create.return_value = {
-            "id": "playlist123"
-        }
+        mock_spotify_client.user_playlist_create.return_value = {"id": "playlist123"}
 
         track = ResolvedTrack(
             uri="spotify:track:1",
@@ -574,9 +572,7 @@ class TestCreatePlaylist:
 
     def test_create_playlist_large_batch(self, mock_spotify_client):
         mock_spotify_client.current_user.return_value = {"id": "user123"}
-        mock_spotify_client.user_playlist_create.return_value = {
-            "id": "playlist123"
-        }
+        mock_spotify_client.user_playlist_create.return_value = {"id": "playlist123"}
 
         tracks = [
             ResolvedTrack(

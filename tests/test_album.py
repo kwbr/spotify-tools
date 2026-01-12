@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import pytest
-
 from spotify_tools import album
 from spotify_tools.types import Album
 

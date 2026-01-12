@@ -38,9 +38,8 @@ def test_measure_time_default_name():
 
 
 def test_measure_time_with_exception():
-    with pytest.raises(ValueError):
-        with perf.measure_time("failing_operation"):
-            raise ValueError("Test error")
+    with pytest.raises(ValueError), perf.measure_time("failing_operation"):
+        raise ValueError("Test error")
 
 
 def test_silent_timer_no_output(capsys):
@@ -52,9 +51,8 @@ def test_silent_timer_no_output(capsys):
 
 
 def test_silent_timer_with_exception():
-    with pytest.raises(ValueError):
-        with perf.silent_timer("failing_silent"):
-            raise ValueError("Test error")
+    with pytest.raises(ValueError), perf.silent_timer("failing_silent"):
+        raise ValueError("Test error")
 
 
 def test_timed_decorator(capsys):

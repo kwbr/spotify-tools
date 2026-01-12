@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import click
-import pytest
 
 from spotify_tools import cli_utils
 from spotify_tools.playlist import SearchResult

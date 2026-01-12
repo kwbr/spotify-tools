@@ -24,7 +24,9 @@ def test_random_album_count(runner, temp_db, count, min_expected):
     result = runner.invoke(cli, ["random-album", "--count", str(count)])
 
     assert result.exit_code == 0
-    uris = [line for line in result.output.strip().split("\n") if "spotify:album:" in line]
+    uris = [
+        line for line in result.output.strip().split("\n") if "spotify:album:" in line
+    ]
     assert len(uris) >= min_expected
 
 
@@ -40,7 +42,9 @@ def test_random_album_year_filter_2020_specific(runner, temp_db):
     result = runner.invoke(cli, ["random-album", "--year", "2020", "--count", "10"])
 
     assert result.exit_code == 0
-    uris = [line for line in result.output.strip().split("\n") if "spotify:album:" in line]
+    uris = [
+        line for line in result.output.strip().split("\n") if "spotify:album:" in line
+    ]
     assert len(uris) == 2
 
 
@@ -48,7 +52,9 @@ def test_random_album_year_filter_2021_specific(runner, temp_db):
     result = runner.invoke(cli, ["random-album", "--year", "2021", "--count", "10"])
 
     assert result.exit_code == 0
-    uris = [line for line in result.output.strip().split("\n") if "spotify:album:" in line]
+    uris = [
+        line for line in result.output.strip().split("\n") if "spotify:album:" in line
+    ]
     assert len(uris) == 3
 
 
@@ -77,7 +83,9 @@ def test_random_album_count_and_year(runner, temp_db):
     result = runner.invoke(cli, ["random-album", "--count", "2", "--year", "2020"])
 
     assert result.exit_code == 0
-    uris = [line for line in result.output.strip().split("\n") if "spotify:album:" in line]
+    uris = [
+        line for line in result.output.strip().split("\n") if "spotify:album:" in line
+    ]
     assert len(uris) == 2
 
 

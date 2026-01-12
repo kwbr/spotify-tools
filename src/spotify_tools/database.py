@@ -258,7 +258,9 @@ def get_album_count(db_path: Path | None = None) -> int:
         return cursor.fetchone()[0]
 
 
-def get_albums_by_year(year: int | None = None, db_path: Path | None = None) -> list[Album]:
+def get_albums_by_year(
+    year: int | None = None, db_path: Path | None = None
+) -> list[Album]:
     """
     Get all albums, optionally filtered by a specific year.
 
@@ -299,7 +301,10 @@ def get_albums_by_year(year: int | None = None, db_path: Path | None = None) -> 
 
 
 def get_random_albums(
-    count: int, year: int | None = None, verbose: bool = False, db_path: Path | None = None
+    count: int,
+    year: int | None = None,
+    verbose: bool = False,
+    db_path: Path | None = None,
 ) -> list[Album]:
     """
     Get random albums, optionally filtered by year.
@@ -785,7 +790,9 @@ def get_play_trends_by_day(days: int = 30) -> dict[str, int]:
         return {row[0]: row[1] for row in cursor.fetchall()}
 
 
-def get_recently_played(limit: int = 50, db_path: Path | None = None) -> list[dict[str, Any]]:
+def get_recently_played(
+    limit: int = 50, db_path: Path | None = None
+) -> list[dict[str, Any]]:
     """
     Get recently played tracks with full details.
 
@@ -907,7 +914,9 @@ def get_syncs_dir() -> Path:
     return syncs_dir
 
 
-def save_raw_sync(plays: list[dict[str, Any]], timestamp: str, db_path: Path | None = None) -> Path:
+def save_raw_sync(
+    plays: list[dict[str, Any]], timestamp: str, db_path: Path | None = None
+) -> Path:
     """
     Save raw sync data to a JSON file.
 

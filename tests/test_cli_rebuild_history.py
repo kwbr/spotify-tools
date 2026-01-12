@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-
-import pytest
 
 from spotify_tools.cli import cli
 
@@ -49,10 +46,10 @@ def test_rebuild_history_multiple_sync_files(runner, temp_cache_dir):
             "album_uri": f"spotify:album:{i}",
             "album_name": f"Test Album {i}",
             "album_artists": ["Test Artist"],
-            "played_at": f"2024-01-{15+i:02d}T12:00:00Z",
+            "played_at": f"2024-01-{15 + i:02d}T12:00:00Z",
         }
 
-        sync_file = syncs_dir / f"sync_2024-01-{15+i:02d}.json"
+        sync_file = syncs_dir / f"sync_2024-01-{15 + i:02d}.json"
         sync_file.write_text(json.dumps([sync_data]))
 
     result = runner.invoke(cli, ["rebuild-history"])

@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-import pytest
-
 from spotify_tools.cli import cli
 
 
@@ -81,7 +79,9 @@ redirect_uri = "http://old"
 
 
 def test_configure_with_error(runner, temp_config_dir):
-    with patch("spotify_tools.commands.configure.config.create_default_config") as mock_create:
+    with patch(
+        "spotify_tools.commands.configure.config.create_default_config"
+    ) as mock_create:
         mock_create.side_effect = Exception("Test error")
 
         result = runner.invoke(
@@ -102,7 +102,7 @@ def test_configure_with_error(runner, temp_config_dir):
 
 
 def test_configure_creates_directory_if_missing(runner, tmp_path, monkeypatch):
-    new_config_dir = tmp_path / "new_config"
+    tmp_path / "new_config"
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
 
     result = runner.invoke(
