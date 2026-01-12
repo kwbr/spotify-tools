@@ -8,16 +8,25 @@ import concurrent.futures
 import random
 import secrets
 import threading
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
 from . import cache, database
 from .types import Album
 
 
-def get_total_album_count(sp: Any) -> int:
+class SpotifyClient(Protocol):
+    """Protocol defining the Spotify client interface used in this module."""
+
+    def current_user_saved_albums(
+        self, limit: int = 20, offset: int = 0
+    ) -> dict[str, Any]: ...
+
+
+def get_total_album_count(sp: SpotifyClient) -> int:
     """
     Get the total number of albums in the user's library.
 
@@ -32,10 +41,10 @@ def get_total_album_count(sp: Any) -> int:
 
 
 def fetch_all_albums_parallel(
-    sp: Any,
+    sp: SpotifyClient,
     progress_callback: Callable[[int, int], None] | None = None,
     max_workers: int = 5,
-    db_path: Any = None,
+    db_path: Path | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
     """
     Fetch all albums from Spotify in parallel and organize them by year.
@@ -125,7 +134,7 @@ def extract_year_from_date(date_string: str) -> int:
     return int(date_string.split("-")[0])
 
 
-def get_random_albums_by_index(sp: Any, count: int) -> list[Album]:
+def get_random_albums_by_index(sp: SpotifyClient, count: int) -> list[Album]:
     """
     Get random albums by generating random indexes.
 
@@ -153,7 +162,7 @@ def get_random_indexes(total: int, count: int) -> list[int]:
     return [secrets.randbelow(total) for _ in range(count)]
 
 
-def fetch_single_album(sp: Any, index: int) -> dict[str, Any]:
+def fetch_single_album(sp: SpotifyClient, index: int) -> dict[str, Any]:
     """
     Fetch a single album by index.
 
