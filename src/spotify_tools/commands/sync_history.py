@@ -74,6 +74,9 @@ def sync_history(ctx, limit):
                     ),
                     "album_uri": album["uri"],
                     "album_name": album["name"],
+                    "album_artists_json": json.dumps(
+                        [artist["name"] for artist in album["artists"]]
+                    ),
                     "played_at": played_at,
                 }
             )

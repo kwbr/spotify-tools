@@ -61,7 +61,10 @@ def show_summary():
     if album_stats:
         echo_info("\nTop 5 Albums:")
         for i, (uri, info) in enumerate(list(album_stats.items())[:5], 1):
-            echo_info(f"  {i}. {info['name']} - {info['play_count']} plays")
+            artists = ", ".join(info["artists"]) if info["artists"] else "Unknown"
+            echo_info(
+                f"  {i}. {info['name']} by {artists} - {info['play_count']} plays"
+            )
 
     if track_stats:
         echo_info("\nTop 5 Tracks:")
@@ -83,7 +86,8 @@ def show_top_albums(limit: int):
     echo_info(f"Top {min(limit, len(album_stats))} Albums by Play Count:\n")
 
     for i, (uri, info) in enumerate(list(album_stats.items())[:limit], 1):
-        echo_info(f"{i:3}. {info['name']}")
+        artists = ", ".join(info["artists"]) if info["artists"] else "Unknown"
+        echo_info(f"{i:3}. {info['name']} by {artists}")
         echo_info(f"     Plays: {info['play_count']}")
         echo_info(f"     Last played: {info['last_played']}")
         echo_info(f"     URI: {uri}")

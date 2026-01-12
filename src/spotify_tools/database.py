@@ -2,6 +2,7 @@
 SQLite database operations for efficient album storage and retrieval.
 """
 
+import contextlib
 import json
 import sqlite3
 import time
@@ -66,6 +67,7 @@ def initialize_db(db_path: Path | None = None) -> None:
             artists_json TEXT NOT NULL,
             album_uri TEXT NOT NULL,
             album_name TEXT NOT NULL,
+            album_artists_json TEXT,
             played_at TEXT NOT NULL,
             UNIQUE(track_uri, played_at)
         )
@@ -430,6 +432,7 @@ def save_play_history(plays: list[dict[str, Any]]) -> int:
             artists_json TEXT NOT NULL,
             album_uri TEXT NOT NULL,
             album_name TEXT NOT NULL,
+            album_artists_json TEXT,
             played_at TEXT NOT NULL,
             UNIQUE(track_uri, played_at)
         )
@@ -447,6 +450,10 @@ def save_play_history(plays: list[dict[str, Any]]) -> int:
             "ON play_history(track_uri)"
         )
 
+        # Add album_artists_json column if it doesn't exist (migration)
+        with contextlib.suppress(sqlite3.OperationalError):
+            conn.execute("ALTER TABLE play_history ADD COLUMN album_artists_json TEXT")
+
     added_count = 0
     with get_db_connection() as conn:
         for play in plays:
@@ -455,8 +462,8 @@ def save_play_history(plays: list[dict[str, Any]]) -> int:
                     """
                     INSERT INTO play_history
                     (track_uri, track_name, artists_json, album_uri,
-                     album_name, played_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                     album_name, album_artists_json, played_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         play["track_uri"],
@@ -464,6 +471,7 @@ def save_play_history(plays: list[dict[str, Any]]) -> int:
                         play["artists_json"],
                         play["album_uri"],
                         play["album_name"],
+                        play.get("album_artists_json"),
                         play["played_at"],
                     ),
                 )
@@ -509,7 +517,7 @@ def get_play_count_by_album() -> dict[str, dict[str, Any]]:
 
     Returns:
         dict: Dictionary with album_uri as key and dict with album info:
-            {album_uri: {name, play_count, last_played}}
+            {album_uri: {name, artists, play_count, last_played}}
     """
     if not database_exists():
         return {}
@@ -517,10 +525,10 @@ def get_play_count_by_album() -> dict[str, dict[str, Any]]:
     with get_db_connection() as conn:
         cursor = conn.execute(
             """
-            SELECT album_uri, album_name, COUNT(*) as play_count,
+            SELECT album_uri, album_name, album_artists_json, COUNT(*) as play_count,
                    MAX(played_at) as last_played
             FROM play_history
-            GROUP BY album_uri, album_name
+            GROUP BY album_uri, album_name, album_artists_json
             ORDER BY play_count DESC
             """
         )
@@ -528,8 +536,9 @@ def get_play_count_by_album() -> dict[str, dict[str, Any]]:
         return {
             row[0]: {
                 "name": row[1],
-                "play_count": row[2],
-                "last_played": row[3],
+                "artists": json.loads(row[2]) if row[2] else [],
+                "play_count": row[3],
+                "last_played": row[4],
             }
             for row in cursor.fetchall()
         }
