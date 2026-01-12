@@ -9,6 +9,7 @@ from .commands import (
     create_playlist,
     list_albums,
     random_album,
+    rebuild_history,
     refresh_cache,
     stats,
     sync_history,
@@ -34,4 +35,5 @@ cli.add_command(list_albums)
 cli.add_command(create_playlist)
 cli.add_command(configure)
 cli.add_command(sync_history)
+cli.add_command(rebuild_history)
 cli.add_command(stats)

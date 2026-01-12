@@ -826,3 +826,121 @@ def get_unique_artist_count() -> int:
             """
         )
         return cursor.fetchone()[0]
+
+
+def get_syncs_dir() -> Path:
+    """
+    Get the directory for storing raw sync files.
+
+    Returns:
+        Path: Path to the syncs directory.
+    """
+    from . import config
+
+    syncs_dir = config.user_cache_dir() / "syncs"
+    syncs_dir.mkdir(parents=True, exist_ok=True)
+    return syncs_dir
+
+
+def save_raw_sync(plays: list[dict[str, Any]], timestamp: str) -> Path:
+    """
+    Save raw sync data to a JSON file.
+
+    Args:
+        plays: List of play dictionaries.
+        timestamp: ISO timestamp for the sync.
+
+    Returns:
+        Path: Path to the saved file.
+    """
+    import socket
+
+    syncs_dir = get_syncs_dir()
+    hostname = socket.gethostname().replace("/", "-").replace("\\", "-")
+    filename = f"{timestamp.replace(':', '-')}_{hostname}.json"
+    filepath = syncs_dir / filename
+
+    with filepath.open("w") as f:
+        json.dump({"timestamp": timestamp, "plays": plays}, f, indent=2)
+
+    return filepath
+
+
+def load_all_syncs() -> list[dict[str, Any]]:
+    """
+    Load all raw sync files and return all plays.
+
+    Returns:
+        list: All plays from all sync files.
+    """
+    syncs_dir = get_syncs_dir()
+    all_plays = []
+
+    for filepath in sorted(syncs_dir.glob("*.json")):
+        try:
+            with filepath.open() as f:
+                data = json.load(f)
+                all_plays.extend(data.get("plays", []))
+        except (json.JSONDecodeError, KeyError):
+            # Skip malformed files
+            continue
+
+    return all_plays
+
+
+def rebuild_history_from_syncs() -> tuple[int, int]:
+    """
+    Rebuild play_history table from all raw sync files.
+
+    Deduplicates by (track_uri, played_at) and rebuilds the database.
+
+    Returns:
+        tuple: (total_plays_loaded, unique_plays_added)
+    """
+    all_plays = load_all_syncs()
+    if not all_plays:
+        return (0, 0)
+
+    # Deduplicate by (track_uri, played_at)
+    seen = set()
+    unique_plays = []
+    for play in all_plays:
+        key = (play["track_uri"], play["played_at"])
+        if key not in seen:
+            seen.add(key)
+            unique_plays.append(play)
+
+    # Clear existing play_history
+    if not database_exists():
+        initialize_db()
+
+    db_path = get_db_path()
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("DELETE FROM play_history")
+
+        # Insert all unique plays
+        for play in unique_plays:
+            conn.execute(
+                """
+                INSERT INTO play_history
+                (track_uri, track_name, artists_json, album_uri,
+                 album_name, album_artists_json, played_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    play["track_uri"],
+                    play["track_name"],
+                    play["artists_json"],
+                    play["album_uri"],
+                    play["album_name"],
+                    play.get("album_artists_json"),
+                    play["played_at"],
+                ),
+            )
+
+        # Update last sync time to most recent play
+        if unique_plays:
+            latest = max(unique_plays, key=lambda p: p["played_at"])
+            set_metadata(conn, "last_play_history_sync", latest["played_at"])
+
+    return (len(all_plays), len(unique_plays))
