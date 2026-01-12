@@ -1,162 +1,201 @@
 from __future__ import annotations
 
-import tempfile
-from pathlib import Path
-from unittest.mock import MagicMock, patch
-
+import click
 import pytest
 
-from spotify_tools.cli import cli
+from spotify_tools.commands.create_playlist import create_playlist_logic, read_items_from_file
 
 
-def test_create_playlist_no_items(runner):
-    result = runner.invoke(cli, ["create-playlist"])
-
-    assert result.exit_code in [0, 1]
-    assert "No items specified" in result.output or result.exit_code == 0
-
-
-def test_create_playlist_with_file_not_found(runner):
-    result = runner.invoke(cli, ["create-playlist", "--file", "nonexistent.txt"])
-
-    assert result.exit_code in [1, 2]
+@pytest.fixture
+def mock_ctx():
+    """Create a mock Click context for testing."""
+    ctx = click.Context(click.Command("test"))
+    ctx.obj = {"VERBOSE": 0}
+    return ctx
 
 
-def test_create_playlist_dry_run_with_items(runner, mock_spotify_client):
-    with patch("spotify_tools.commands.create_playlist.spotify.create_spotify_client") as mock_create:
-        mock_create.return_value.__enter__.return_value = mock_spotify_client
-        mock_spotify_client.search.return_value = {
-            "tracks": {"items": []},
-            "albums": {"items": []},
+def test_create_playlist_no_items(mock_ctx, mock_spotify_client):
+    result = create_playlist_logic(mock_spotify_client, mock_ctx, [])
+
+    assert result["success"] is False
+    assert result["error"] == "no_items"
+
+
+def test_create_playlist_dry_run_with_items(mock_ctx, mock_spotify_client):
+    mock_spotify_client.search.return_value = {
+        "tracks": {
+            "items": [
+                {
+                    "uri": "spotify:track:1",
+                    "name": "Test Track",
+                    "artists": [{"name": "Test Artist"}],
+                }
+            ]
         }
+    }
 
-        result = runner.invoke(
-            cli, ["create-playlist", "--dry-run", "Bohemian Rhapsody"]
-        )
+    result = create_playlist_logic(
+        mock_spotify_client,
+        mock_ctx,
+        ["Test Track"],
+        dry_run=True
+    )
 
-        assert result.exit_code == 0 or "Search Quality Analysis" in result.output
+    assert result["success"] is True
+    assert result["dry_run"] is True
+    assert result["tracks_found"] >= 0
 
 
-def test_create_playlist_with_file(runner, mock_spotify_client):
-    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
-        f.write("Track One\n")
-        f.write("Track Two\n")
-        temp_file = f.name
+def test_create_playlist_with_track(mock_ctx, mock_spotify_client):
+    mock_spotify_client.search.return_value = {
+        "tracks": {
+            "items": [
+                {
+                    "uri": "spotify:track:1",
+                    "name": "Test Track",
+                    "artists": [{"name": "Test Artist"}],
+                }
+            ]
+        }
+    }
+    mock_spotify_client.current_user.return_value = {"id": "user123"}
+    mock_spotify_client.user_playlist_create.return_value = {"id": "playlist123"}
 
-    try:
-        with patch("spotify_tools.commands.create_playlist.spotify.create_spotify_client") as mock_create:
-            mock_create.return_value.__enter__.return_value = mock_spotify_client
-            mock_spotify_client.search.return_value = {
-                "tracks": {"items": []},
-                "albums": {"items": []},
+    result = create_playlist_logic(
+        mock_spotify_client,
+        mock_ctx,
+        ["track:Test Track"],
+        name="Test Playlist"
+    )
+
+    assert result["success"] is True
+    assert result["playlist_id"] == "playlist123"
+    assert result["tracks_count"] >= 0
+
+
+def test_create_playlist_with_name(mock_ctx, mock_spotify_client):
+    mock_spotify_client.search.return_value = {
+        "tracks": {
+            "items": [
+                {
+                    "uri": "spotify:track:1",
+                    "name": "Test Track",
+                    "artists": [{"name": "Test Artist"}],
+                }
+            ]
+        }
+    }
+    mock_spotify_client.current_user.return_value = {"id": "user123"}
+    mock_spotify_client.user_playlist_create.return_value = {"id": "playlist123"}
+
+    result = create_playlist_logic(
+        mock_spotify_client,
+        mock_ctx,
+        ["Test Track"],
+        name="My Playlist"
+    )
+
+    assert result["success"] is True
+    mock_spotify_client.user_playlist_create.assert_called_once()
+
+
+def test_create_playlist_with_uri(mock_ctx, mock_spotify_client):
+    mock_spotify_client.track.return_value = {
+        "uri": "spotify:track:1",
+        "name": "Test Track",
+        "artists": [{"name": "Test Artist"}],
+    }
+    mock_spotify_client.current_user.return_value = {"id": "user123"}
+    mock_spotify_client.user_playlist_create.return_value = {"id": "playlist123"}
+
+    result = create_playlist_logic(
+        mock_spotify_client,
+        mock_ctx,
+        ["spotify:track:1"]
+    )
+
+    assert result["success"] is True
+    assert result["playlist_id"] == "playlist123"
+
+
+def test_create_playlist_multiple_items(mock_ctx, mock_spotify_client):
+    mock_spotify_client.search.return_value = {
+        "tracks": {
+            "items": [
+                {
+                    "uri": "spotify:track:1",
+                    "name": "Test Track",
+                    "artists": [{"name": "Test Artist"}],
+                }
+            ]
+        }
+    }
+    mock_spotify_client.current_user.return_value = {"id": "user123"}
+    mock_spotify_client.user_playlist_create.return_value = {"id": "playlist123"}
+
+    result = create_playlist_logic(
+        mock_spotify_client,
+        mock_ctx,
+        ["track:Track 1", "track:Track 2"],
+        name="Multi Playlist"
+    )
+
+    assert result["success"] is True
+    assert result["playlist_id"] == "playlist123"
+
+
+def test_create_playlist_with_album(mock_ctx, mock_spotify_client):
+    mock_spotify_client.search.return_value = {
+        "albums": {
+            "items": [
+                {
+                    "id": "album1",
+                    "uri": "spotify:album:1",
+                    "name": "Test Album",
+                    "artists": [{"name": "Test Artist"}],
+                }
+            ]
+        }
+    }
+    mock_spotify_client.album_tracks.return_value = {
+        "items": [
+            {
+                "uri": "spotify:track:1",
+                "name": "Track 1",
+                "artists": [{"name": "Test Artist"}],
             }
+        ]
+    }
+    mock_spotify_client.current_user.return_value = {"id": "user123"}
+    mock_spotify_client.user_playlist_create.return_value = {"id": "playlist123"}
 
-            result = runner.invoke(
-                cli, ["create-playlist", "--dry-run", "--file", temp_file]
-            )
+    result = create_playlist_logic(
+        mock_spotify_client,
+        mock_ctx,
+        ["album:Test Album"]
+    )
 
-            assert result.exit_code == 0 or "items" in result.output.lower()
-    finally:
-        Path(temp_file).unlink(missing_ok=True)
-
-
-def test_create_playlist_with_output_file(runner, mock_spotify_client, tmp_path):
-    output_file = tmp_path / "output.txt"
-
-    with patch("spotify_tools.commands.create_playlist.spotify.create_spotify_client") as mock_create:
-        mock_create.return_value.__enter__.return_value = mock_spotify_client
-        mock_spotify_client.search.return_value = {
-            "tracks": {"items": []},
-            "albums": {"items": []},
-        }
-
-        result = runner.invoke(
-            cli,
-            [
-                "create-playlist",
-                "--dry-run",
-                "--output",
-                str(output_file),
-                "Test Track",
-            ],
-        )
-
-        assert result.exit_code == 0 or output_file.exists()
+    assert result["success"] is True
+    assert result["playlist_id"] == "playlist123"
 
 
-def test_create_playlist_with_name(runner, mock_spotify_client):
-    with patch("spotify_tools.commands.create_playlist.spotify.create_spotify_client") as mock_create:
-        mock_create.return_value.__enter__.return_value = mock_spotify_client
-        mock_spotify_client.search.return_value = {
-            "tracks": {"items": []},
-            "albums": {"items": []},
-        }
+def test_read_items_from_file(tmp_path):
+    test_file = tmp_path / "items.txt"
+    test_file.write_text("track:Song 1\ntrack:Song 2\n\ntrack:Song 3\n")
 
-        result = runner.invoke(
-            cli,
-            ["create-playlist", "--dry-run", "--name", "My Playlist", "Test Track"],
-        )
+    items = read_items_from_file(test_file)
 
-        assert result.exit_code == 0
+    assert len(items) == 3
+    assert items[0] == "track:Song 1"
+    assert items[1] == "track:Song 2"
+    assert items[2] == "track:Song 3"
 
 
-def test_create_playlist_with_track_prefix(runner, mock_spotify_client):
-    with patch("spotify_tools.commands.create_playlist.spotify.create_spotify_client") as mock_create:
-        mock_create.return_value.__enter__.return_value = mock_spotify_client
-        mock_spotify_client.search.return_value = {
-            "tracks": {"items": []},
-            "albums": {"items": []},
-        }
+def test_read_items_from_file_empty_lines(tmp_path):
+    test_file = tmp_path / "items.txt"
+    test_file.write_text("\n\ntrack:Song 1\n\n")
 
-        result = runner.invoke(
-            cli, ["create-playlist", "--dry-run", "track:Bohemian Rhapsody"]
-        )
+    items = read_items_from_file(test_file)
 
-        assert result.exit_code == 0
-
-
-def test_create_playlist_with_album_prefix(runner, mock_spotify_client):
-    with patch("spotify_tools.commands.create_playlist.spotify.create_spotify_client") as mock_create:
-        mock_create.return_value.__enter__.return_value = mock_spotify_client
-        mock_spotify_client.search.return_value = {
-            "albums": {"items": []},
-        }
-
-        result = runner.invoke(
-            cli, ["create-playlist", "--dry-run", "album:Dark Side of the Moon"]
-        )
-
-        assert result.exit_code == 0
-
-
-def test_create_playlist_with_uri(runner, mock_spotify_client):
-    with patch("spotify_tools.commands.create_playlist.spotify.create_spotify_client") as mock_create:
-        mock_create.return_value.__enter__.return_value = mock_spotify_client
-
-        result = runner.invoke(
-            cli, ["create-playlist", "--dry-run", "spotify:track:abc123"]
-        )
-
-        assert result.exit_code == 0
-
-
-def test_create_playlist_multiple_items(runner, mock_spotify_client):
-    with patch("spotify_tools.commands.create_playlist.spotify.create_spotify_client") as mock_create:
-        mock_create.return_value.__enter__.return_value = mock_spotify_client
-        mock_spotify_client.search.return_value = {
-            "tracks": {"items": []},
-            "albums": {"items": []},
-        }
-
-        result = runner.invoke(
-            cli,
-            [
-                "create-playlist",
-                "--dry-run",
-                "Track One",
-                "Track Two",
-                "album:Album Name",
-            ],
-        )
-
-        assert result.exit_code == 0
+    assert len(items) == 1
+    assert items[0] == "track:Song 1"
