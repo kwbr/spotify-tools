@@ -34,7 +34,6 @@ def random_album(ctx, count, year, timing):
     # Configure timing output
     if not timing:
         # Monkey patch the measure_time context manager to do nothing
-        perf.measure_time_original = perf.measure_time
         perf.measure_time = lambda name="Operation": perf.silent_timer(name)
     # Check if we have a cache first
     cache_data = cache.load_albums()
