@@ -25,7 +25,7 @@ def get_total_album_count(sp) -> int:
     return probe["total"]
 
 
-def fetch_all_albums_parallel(sp, progress_callback=None, max_workers=5):
+def fetch_all_albums_parallel(sp, progress_callback=None, max_workers=5, db_path=None):
     """
     Fetch all albums from Spotify in parallel and organize them by year.
 
@@ -33,6 +33,7 @@ def fetch_all_albums_parallel(sp, progress_callback=None, max_workers=5):
         sp: Spotify client.
         progress_callback: Optional callback function for progress updates.
         max_workers: Maximum number of concurrent workers (to avoid rate limits).
+        db_path: Optional database path for testing.
 
     Returns:
         dict: Albums organized by year.
@@ -79,7 +80,7 @@ def fetch_all_albums_parallel(sp, progress_callback=None, max_workers=5):
             raise exception
 
     # Save to cache
-    cache.save_albums(albums_by_year)
+    cache.save_albums(albums_by_year, db_path=db_path)
     return albums_by_year
 
 

@@ -5,15 +5,16 @@ Cache management for Spotify data.
 from . import database
 
 
-def save_albums(albums_by_year):
+def save_albums(albums_by_year, db_path=None):
     """
     Save albums to SQLite database with year grouping.
 
     Args:
         albums_by_year: Dictionary of albums organized by year.
+        db_path: Optional database path for testing.
     """
     # Forward to SQLite implementation
-    database.save_albums(albums_by_year)
+    database.save_albums(albums_by_year, db_path=db_path)
 
 
 def load_albums():

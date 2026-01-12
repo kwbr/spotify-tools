@@ -56,7 +56,7 @@ def random_album(ctx, count, year, timing):
         raise click.Abort()
 
 
-def refresh_album_cache(ctx, sp, max_workers=5, show_progress=True):
+def refresh_album_cache(ctx, sp, max_workers=5, show_progress=True, db_path=None):
     """
     Refresh the album cache.
 
@@ -65,6 +65,7 @@ def refresh_album_cache(ctx, sp, max_workers=5, show_progress=True):
         sp: Spotify client.
         max_workers: Maximum number of parallel workers.
         show_progress: Whether to show a progress bar.
+        db_path: Optional database path for testing.
     """
     echo_verbose(ctx, f"Using parallel fetching with {max_workers} workers")
 
@@ -79,13 +80,13 @@ def refresh_album_cache(ctx, sp, max_workers=5, show_progress=True):
             progress_callback = create_progress_callback(bar)
 
             album.fetch_all_albums_parallel(
-                sp, progress_callback, max_workers=max_workers
+                sp, progress_callback, max_workers=max_workers, db_path=db_path
             )
     else:
-        album.fetch_all_albums_parallel(sp, max_workers=max_workers)
+        album.fetch_all_albums_parallel(sp, max_workers=max_workers, db_path=db_path)
 
     # Report cache refresh
-    total_albums = database.get_album_count()
+    total_albums = database.get_album_count(db_path=db_path)
     echo_info(f"Album database refreshed with {total_albums} albums.")
 
 
