@@ -2,15 +2,12 @@ from __future__ import annotations
 
 import json
 import sqlite3
-import tempfile
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-import responses
 from click.testing import CliRunner
-from freezegun import freeze_time
 
 from spotify_tools import database
 from spotify_tools.types import Album
@@ -252,7 +249,3 @@ redirect_uri = "http://localhost:8888/callback"
     return config_file
 
 
-@pytest.fixture
-def frozen_time_2024():
-    with freeze_time("2024-01-15 12:00:00"):
-        yield
