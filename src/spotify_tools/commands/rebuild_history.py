@@ -2,15 +2,22 @@
 Rebuild history command for multi-machine sync support.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import click
 
 from spotify_tools import database
 from spotify_tools.cli_utils import echo_info, echo_verbose
 
+if TYPE_CHECKING:
+    from click import Context
+
 
 @click.command(name="rebuild-history")
 @click.pass_context
-def rebuild_history(ctx):
+def rebuild_history(ctx: Context) -> None:
     """
     Rebuild play history database from raw sync files.
 

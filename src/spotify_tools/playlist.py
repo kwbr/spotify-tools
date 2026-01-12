@@ -2,9 +2,35 @@
 Playlist creation functionality for Spotify tools.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Protocol
+
+
+class SpotifyClient(Protocol):
+    """Protocol for Spotify client objects."""
+
+    def search(
+        self, q: str, type: str, limit: int
+    ) -> dict[str, Any]: ...
+
+    def album_tracks(self, album_id: str) -> dict[str, Any]: ...
+
+    def track(self, track_id: str) -> dict[str, Any]: ...
+
+    def album(self, album_id: str) -> dict[str, Any]: ...
+
+    def current_user(self) -> dict[str, Any]: ...
+
+    def user_playlist_create(
+        self, user_id: str, name: str, public: bool, description: str
+    ) -> dict[str, Any]: ...
+
+    def playlist_add_items(
+        self, playlist_id: str, items: list[str]
+    ) -> dict[str, Any]: ...
 
 
 @dataclass
@@ -150,7 +176,7 @@ def parse_item(item_string: str) -> tuple[str, str]:
     return "auto", item_string
 
 
-def search_track(sp, query: str) -> SearchResult:
+def search_track(sp: SpotifyClient, query: str) -> SearchResult:
     """
     Search for a track with detailed result information.
 
@@ -201,7 +227,7 @@ def search_track(sp, query: str) -> SearchResult:
         )
 
 
-def search_album(sp, query: str) -> SearchResult:
+def search_album(sp: SpotifyClient, query: str) -> SearchResult:
     """
     Search for an album with detailed result information.
 
@@ -263,7 +289,7 @@ def search_album(sp, query: str) -> SearchResult:
         )
 
 
-def search_auto(sp, query: str) -> SearchResult:
+def search_auto(sp: SpotifyClient, query: str) -> SearchResult:
     """
     Auto search with detailed result information (try tracks first, then albums).
 
@@ -288,7 +314,7 @@ def search_auto(sp, query: str) -> SearchResult:
     return replace(album_result, search_type="auto (weak album match)")
 
 
-def resolve_uri(sp, uri: str) -> list[ResolvedTrack] | None:
+def resolve_uri(sp: SpotifyClient, uri: str) -> list[ResolvedTrack] | None:
     """
     Resolve a Spotify URI to track(s).
 
@@ -332,7 +358,7 @@ def resolve_uri(sp, uri: str) -> list[ResolvedTrack] | None:
     return None
 
 
-def resolve_items(sp, items: list[str]) -> list[SearchResult]:
+def resolve_items(sp: SpotifyClient, items: list[str]) -> list[SearchResult]:
     """
     Resolve a list of item strings to tracks with detailed search information.
 
@@ -390,7 +416,7 @@ def resolve_items(sp, items: list[str]) -> list[SearchResult]:
 
 
 def create_playlist_from_tracks(
-    sp, tracks: list[ResolvedTrack], name: str | None = None
+    sp: SpotifyClient, tracks: list[ResolvedTrack], name: str | None = None
 ) -> str:
     """
     Create a playlist from resolved tracks.

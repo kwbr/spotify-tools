@@ -2,7 +2,10 @@
 Create playlist command for Spotify tools CLI.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import click
 
@@ -14,8 +17,11 @@ from spotify_tools.cli_utils import (
     write_uris_to_file,
 )
 
+if TYPE_CHECKING:
+    from click import Context
 
-def read_items_from_file(file_path):
+
+def read_items_from_file(file_path: str) -> list[str]:
     """
     Read items from a file.
 
@@ -32,7 +38,14 @@ def read_items_from_file(file_path):
         return [line.strip() for line in f if line.strip()]
 
 
-def create_playlist_logic(sp, ctx, all_items, name=None, dry_run=False, output=None):
+def create_playlist_logic(
+    sp: Any,
+    ctx: Context,
+    all_items: list[str],
+    name: str | None = None,
+    dry_run: bool = False,
+    output: str | None = None,
+) -> dict[str, Any]:
     """
     Core business logic for creating a playlist from items.
 
@@ -59,7 +72,9 @@ def create_playlist_logic(sp, ctx, all_items, name=None, dry_run=False, output=N
     return _handle_create_playlist(sp, ctx, all_items, name, output)
 
 
-def _handle_dry_run(sp, ctx, all_items, name, output):
+def _handle_dry_run(
+    sp: Any, ctx: Context, all_items: list[str], name: str | None, output: str | None
+) -> dict[str, Any]:
     """Handle dry-run mode: show detailed search results."""
     search_results = playlist.resolve_items(sp, all_items)
 
@@ -151,7 +166,9 @@ def _handle_dry_run(sp, ctx, all_items, name, output):
     }
 
 
-def _handle_create_playlist(sp, ctx, all_items, name, output):
+def _handle_create_playlist(
+    sp: Any, ctx: Context, all_items: list[str], name: str | None, output: str | None
+) -> dict[str, Any]:
     """Handle normal mode: create playlist."""
     search_results = playlist.resolve_items(sp, all_items)
     resolved_tracks, skipped_items = extract_tracks_from_search_results(search_results)
@@ -207,7 +224,14 @@ def _handle_create_playlist(sp, ctx, all_items, name, output):
     help="Write resolved track URIs to file (works in both dry-run and create modes)",
 )
 @click.pass_context
-def create_playlist(ctx, items, name, file_path, dry_run, output):
+def create_playlist(
+    ctx: Context,
+    items: tuple[str, ...],
+    name: str | None,
+    file_path: str | None,
+    dry_run: bool,
+    output: str | None,
+) -> int | None:
     """Create a playlist from tracks and albums.
 
     Specify items as free-form text, "track:Name", "album:Name", "single:Name",

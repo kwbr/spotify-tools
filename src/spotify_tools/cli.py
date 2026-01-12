@@ -2,6 +2,8 @@
 Command line interface for Spotify tools.
 """
 
+from __future__ import annotations
+
 import click
 
 from .commands import (
@@ -22,7 +24,7 @@ from .commands import (
 )
 @click.version_option()
 @click.pass_context
-def cli(ctx, verbose):
+def cli(ctx: click.Context, verbose: int) -> None:
     """A tool for working with Spotify."""
     ctx.ensure_object(dict)
     ctx.obj["VERBOSE"] = verbose

@@ -2,13 +2,17 @@
 SQLite database operations for efficient album storage and retrieval.
 """
 
+from __future__ import annotations
+
 import contextlib
 import json
 import sqlite3
 import time
-from collections.abc import Iterator
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
 
 from . import perf
 from .types import Album

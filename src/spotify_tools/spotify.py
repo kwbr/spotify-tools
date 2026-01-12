@@ -2,7 +2,10 @@
 Spotify client functionality with context manager support.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
+from typing import Any
 
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
@@ -15,12 +18,12 @@ class SpotifyClient:
     Spotify client with context manager support for proper resource management.
     """
 
-    def __init__(self, cache_dir=None):
+    def __init__(self, cache_dir: Path | None = None) -> None:
         """Initialize Spotify client."""
         self.cache_dir = cache_dir or config.user_cache_dir()
-        self.client = None
+        self.client: spotipy.Spotify | None = None
 
-    def __enter__(self):
+    def __enter__(self) -> spotipy.Spotify:
         """Create and return the Spotify client."""
         conf = config.load_config()
         token_cache_path = Path(self.cache_dir / "token")
@@ -43,13 +46,13 @@ class SpotifyClient:
         )
         return self.client
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> bool:
         """Clean up resources."""
         self.client = None
         return False  # Don't suppress exceptions
 
 
-def create_spotify_client(cache_dir=None):
+def create_spotify_client(cache_dir: Path | None = None) -> SpotifyClient:
     """
     Create a Spotify client context manager.
 

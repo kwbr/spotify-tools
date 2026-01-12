@@ -2,15 +2,25 @@
 Sync play history command for Spotify tools CLI.
 """
 
+from __future__ import annotations
+
 import json
+from typing import TYPE_CHECKING, Any
 
 import click
 
 from spotify_tools import config, database, spotify
 from spotify_tools.cli_utils import echo_info, echo_verbose
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
-def sync_play_history_logic(sp, ctx, limit, db_path=None):
+    from click import Context
+
+
+def sync_play_history_logic(
+    sp: Any, ctx: Context, limit: int, db_path: Path | None = None
+) -> dict[str, int]:
     """
     Core business logic for syncing play history from Spotify.
 
@@ -119,7 +129,7 @@ def sync_play_history_logic(sp, ctx, limit, db_path=None):
     help="Maximum number of recently played tracks to fetch (max 50).",
 )
 @click.pass_context
-def sync_history(ctx, limit):
+def sync_history(ctx: Context, limit: int) -> None:
     """
     Sync play history from Spotify.
 

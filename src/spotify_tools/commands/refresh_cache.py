@@ -2,16 +2,23 @@
 Refresh cache command for Spotify tools CLI.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import click
 
 from spotify_tools import config, spotify
 from spotify_tools.commands.random_album import refresh_album_cache
 
+if TYPE_CHECKING:
+    from click import Context
+
 
 @click.command(name="refresh-cache")
 @click.option("--max-workers", default=5, help="Maximum number of parallel workers.")
 @click.pass_context
-def refresh_cache(ctx, max_workers):
+def refresh_cache(ctx: Context, max_workers: int) -> None:
     """Force a refresh of the album cache.
 
     This command updates an existing cache or creates a new one by fetching all albums

@@ -2,12 +2,18 @@
 Stats command to view play history statistics.
 """
 
+from __future__ import annotations
+
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
 
 import click
 
 from spotify_tools import database
 from spotify_tools.cli_utils import echo_info
+
+if TYPE_CHECKING:
+    from click import Context
 
 
 @click.command()
@@ -30,7 +36,7 @@ from spotify_tools.cli_utils import echo_info
     help="Filter to last N days (for trends/habits).",
 )
 @click.pass_context
-def stats(ctx, stat_type, limit, days):
+def stats(ctx: Context, stat_type: str, limit: int, days: int | None) -> None:
     """View play history statistics with various views and filters."""
     if not database.database_exists():
         echo_info("No play history found. Run 'spt sync-history' first.")
@@ -57,7 +63,7 @@ def stats(ctx, stat_type, limit, days):
         show_listening_habits()
 
 
-def show_summary():
+def show_summary() -> None:
     """Show summary statistics."""
     total_plays = database.get_total_play_count()
     album_stats = database.get_play_count_by_album()
@@ -86,7 +92,7 @@ def show_summary():
             )
 
 
-def show_top_albums(limit: int, days: int | None):
+def show_top_albums(limit: int, days: int | None) -> None:
     """Show top albums by play count."""
     if days:
         since = (datetime.now() - timedelta(days=days)).isoformat()
@@ -122,7 +128,7 @@ def show_top_albums(limit: int, days: int | None):
             echo_info("")
 
 
-def show_top_tracks(limit: int, days: int | None):
+def show_top_tracks(limit: int, days: int | None) -> None:
     """Show top tracks by play count."""
     if days:
         since = (datetime.now() - timedelta(days=days)).isoformat()
@@ -160,7 +166,7 @@ def show_top_tracks(limit: int, days: int | None):
             echo_info("")
 
 
-def show_top_artists(limit: int, days: int | None):
+def show_top_artists(limit: int, days: int | None) -> None:
     """Show top artists by play count."""
     if days:
         since = (datetime.now() - timedelta(days=days)).isoformat()
@@ -188,7 +194,7 @@ def show_top_artists(limit: int, days: int | None):
             echo_info("")
 
 
-def show_trends(days: int):
+def show_trends(days: int) -> None:
     """Show play trends over time."""
     trends = database.get_play_trends_by_day(days)
     if not trends:
@@ -209,7 +215,7 @@ def show_trends(days: int):
     echo_info(f"Most active day: {max(trends.items(), key=lambda x: x[1])[0]}")
 
 
-def show_recently_played(limit: int):
+def show_recently_played(limit: int) -> None:
     """Show recently played tracks."""
     plays = database.get_recently_played(limit)
     if not plays:
@@ -224,7 +230,7 @@ def show_recently_played(limit: int):
         echo_info(f"{time_str} - {play['track_name']} by {artists}")
 
 
-def show_listening_habits():
+def show_listening_habits() -> None:
     """Show listening habits (time of day, day of week)."""
     by_hour = database.get_plays_by_hour()
     by_day = database.get_plays_by_day_of_week()

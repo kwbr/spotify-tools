@@ -2,10 +2,19 @@
 Cache management for Spotify data.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
 from . import database
 
 
-def save_albums(albums_by_year, db_path=None):
+def save_albums(
+    albums_by_year: dict[str, list[dict[str, Any]]], db_path: Path | None = None
+) -> None:
     """
     Save albums to SQLite database with year grouping.
 
@@ -17,7 +26,7 @@ def save_albums(albums_by_year, db_path=None):
     database.save_albums(albums_by_year, db_path=db_path)
 
 
-def load_albums():
+def load_albums() -> dict[str, Any] | None:
     """
     Load album data from cache if available.
 
@@ -38,7 +47,7 @@ def load_albums():
     return {"album_counts": album_counts}
 
 
-def calculate_cache_age():
+def calculate_cache_age() -> tuple[int, int]:
     """
     Calculate the age of the cache in days and hours.
 
@@ -49,7 +58,7 @@ def calculate_cache_age():
     return database.calculate_cache_age()
 
 
-def format_cache_age_message(days, hours):
+def format_cache_age_message(days: int, hours: int) -> str:
     """
     Format a message about cache age.
 

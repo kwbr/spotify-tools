@@ -2,10 +2,17 @@
 List albums command for Spotify tools CLI.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import click
 
 from spotify_tools import album, database
 from spotify_tools.cli_utils import echo_info, output_album
+
+if TYPE_CHECKING:
+    from click import Context
 
 
 @click.command()
@@ -20,7 +27,7 @@ from spotify_tools.cli_utils import echo_info, output_album
 )
 @click.option("--year", type=int, help="Filter albums by release year.")
 @click.pass_context
-def list_albums(ctx, sort, year):
+def list_albums(ctx: Context, sort: str, year: int | None) -> None:
     """List all albums in your library with sorting options."""
     if not database.database_exists():
         echo_info("No album cache found. Run 'spt refresh-cache' to create one.")
