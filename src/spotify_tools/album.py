@@ -2,16 +2,22 @@
 Album module implementation using the Album type.
 """
 
+from __future__ import annotations
+
 import concurrent.futures
 import random
 import secrets
 import threading
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 from . import cache, database
 from .types import Album
 
 
-def get_total_album_count(sp) -> int:
+def get_total_album_count(sp: Any) -> int:
     """
     Get the total number of albums in the user's library.
 
@@ -25,7 +31,12 @@ def get_total_album_count(sp) -> int:
     return probe["total"]
 
 
-def fetch_all_albums_parallel(sp, progress_callback=None, max_workers=5, db_path=None):
+def fetch_all_albums_parallel(
+    sp: Any,
+    progress_callback: Callable[[int, int], None] | None = None,
+    max_workers: int = 5,
+    db_path: Any = None,
+) -> dict[str, list[dict[str, Any]]]:
     """
     Fetch all albums from Spotify in parallel and organize them by year.
 
@@ -84,7 +95,9 @@ def fetch_all_albums_parallel(sp, progress_callback=None, max_workers=5, db_path
     return albums_by_year
 
 
-def process_album_batch(batch, albums_by_year):
+def process_album_batch(
+    batch: dict[str, Any], albums_by_year: dict[str, list[dict[str, Any]]]
+) -> None:
     """
     Process a batch of albums and organize by year.
 
@@ -107,12 +120,12 @@ def process_album_batch(batch, albums_by_year):
         albums_by_year[year_str].append(album.to_dict())
 
 
-def extract_year_from_date(date_string):
+def extract_year_from_date(date_string: str) -> int:
     """Extract year from a date string (handles YYYY, YYYY-MM, YYYY-MM-DD)."""
     return int(date_string.split("-")[0])
 
 
-def get_random_albums_by_index(sp, count):
+def get_random_albums_by_index(sp: Any, count: int) -> list[Album]:
     """
     Get random albums by generating random indexes.
 
@@ -135,12 +148,12 @@ def get_random_albums_by_index(sp, count):
     return albums
 
 
-def get_random_indexes(total, count):
+def get_random_indexes(total: int, count: int) -> list[int]:
     """Generate random indexes within a range."""
     return [secrets.randbelow(total) for _ in range(count)]
 
 
-def fetch_single_album(sp, index):
+def fetch_single_album(sp: Any, index: int) -> dict[str, Any]:
     """
     Fetch a single album by index.
 
@@ -151,7 +164,7 @@ def fetch_single_album(sp, index):
     return results["items"][0]
 
 
-def select_random_albums(albums, count):
+def select_random_albums(albums: list[Album], count: int) -> list[Album]:
     """
     Select random albums from a list, respecting count limit.
 
@@ -199,7 +212,9 @@ def get_albums_by_year(year: int | None = None) -> list[Album]:
     return database.get_albums_by_year(year)
 
 
-def count_total_albums(albums_by_year=None):
+def count_total_albums(
+    albums_by_year: dict[str, list[dict[str, Any]]] | None = None,
+) -> int:
     """Count the total number of albums across all years.
 
     Args:
@@ -217,7 +232,7 @@ def count_total_albums(albums_by_year=None):
     return sum(len(albums) for albums in albums_by_year.values())
 
 
-def get_sorted_years():
+def get_sorted_years() -> list[int]:
     """Get a sorted list of years from the database.
 
     Returns:
