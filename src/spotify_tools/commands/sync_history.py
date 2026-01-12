@@ -81,8 +81,14 @@ def sync_history(ctx, limit):
                 }
             )
 
-        # Save to database
+        # Save to database and raw sync file
         if plays:
+            # Save raw sync file for multi-machine support
+            latest_play_time = plays[0]["played_at"]
+            sync_file = database.save_raw_sync(plays, latest_play_time)
+            echo_verbose(ctx, f"Saved raw sync to {sync_file}")
+
+            # Save to database
             added_count = database.save_play_history(plays)
             echo_info(
                 f"Synced {len(plays)} tracks, {added_count} new "
@@ -90,7 +96,6 @@ def sync_history(ctx, limit):
             )
 
             # Update last sync time to the most recent play
-            latest_play_time = plays[0]["played_at"]
             database.set_last_sync_time(latest_play_time)
             echo_verbose(ctx, f"Updated last sync time to {latest_play_time}")
 
