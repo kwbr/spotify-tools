@@ -15,7 +15,8 @@ def test_initialize_db(temp_cache_dir):
 
     assert db_path.exists()
 
-    with sqlite3.connect(db_path) as conn:
+    conn = sqlite3.connect(db_path)
+    try:
         cursor = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='albums'"
         )
@@ -25,6 +26,8 @@ def test_initialize_db(temp_cache_dir):
             "SELECT name FROM sqlite_master WHERE type='table' AND name='metadata'"
         )
         assert cursor.fetchone() is not None
+    finally:
+        conn.close()
 
 
 def test_save_albums(temp_db):
