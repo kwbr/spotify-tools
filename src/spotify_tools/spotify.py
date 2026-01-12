@@ -32,6 +32,8 @@ class SpotifyClient:
                     "user-library-read",
                     # Create and modify playlists via create-playlist command
                     "playlist-modify-private",
+                    # Access recently played tracks for play history tracking
+                    "user-read-recently-played",
                 ),
                 client_id=conf["client_id"],
                 client_secret=conf["client_secret"],
