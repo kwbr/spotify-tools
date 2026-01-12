@@ -3,11 +3,9 @@ Album module implementation using the Album type.
 """
 
 import concurrent.futures
-import json
 import random
 import secrets
 import threading
-from typing import Dict, List, Optional, Any
 
 from . import cache, database
 from .types import Album
@@ -167,8 +165,8 @@ def select_random_albums(albums, count):
 
 
 def get_random_albums(
-    count: int, year: Optional[int] = None, verbose: bool = False
-) -> List[Album]:
+    count: int, year: int | None = None, verbose: bool = False
+) -> list[Album]:
     """
     Get random albums efficiently using the SQLite database.
 
@@ -178,7 +176,8 @@ def get_random_albums(
     Args:
         count: Number of albums to select.
         year: Optional year filter.
-        verbose: If True, fetch all album data. If False (default), optimize for URI-only.
+        verbose: If True, fetch all album data. If False (default),
+            optimize for URI-only.
 
     Returns:
         list: List of randomly selected Album objects.
@@ -186,15 +185,15 @@ def get_random_albums(
     return database.get_random_albums(count, year, verbose)
 
 
-def get_albums_by_year(year: int) -> List[Album]:
+def get_albums_by_year(year: int | None = None) -> list[Album]:
     """
-    Get all albums for a specific year using the SQLite database.
+    Get all albums, optionally filtered by a specific year using the SQLite database.
 
     Args:
-        year: Year to filter by.
+        year: Optional year to filter by. If None, returns all albums.
 
     Returns:
-        list: List of Album objects for the specified year.
+        list: List of Album objects.
     """
     return database.get_albums_by_year(year)
 

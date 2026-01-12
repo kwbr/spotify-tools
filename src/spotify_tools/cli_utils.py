@@ -3,10 +3,8 @@ Shared utility functions for the CLI commands.
 """
 
 from pathlib import Path
+
 import click
-
-from . import perf
-
 
 # Output and display functions
 
@@ -70,12 +68,8 @@ def output_album(ctx, alb):
         ctx: Click context.
         alb: Album object.
     """
-    # In any verbosity level, always output the URI
-    with perf.measure_time("echo_uri"):
-        echo_always(alb.uri)
+    echo_always(alb.uri)
 
-    # Add album details in verbose mode
     if ctx.obj["VERBOSE"] >= 1:
-        with perf.measure_time("format_and_echo_album_details"):
-            artists_str = alb.format_artists()
-            echo_verbose(ctx, f"Album: {alb.name} by {artists_str}")
+        artists_str = alb.format_artists()
+        echo_verbose(ctx, f"Album: {alb.name} by {artists_str}")

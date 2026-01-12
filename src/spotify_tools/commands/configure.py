@@ -4,8 +4,8 @@ Configure command for Spotify tools CLI.
 
 import click
 
-from .. import config
-from ..cli_utils import echo_always
+from spotify_tools import config
+from spotify_tools.cli_utils import echo_always
 
 
 @click.command()

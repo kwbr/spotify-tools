@@ -4,8 +4,8 @@ Refresh cache command for Spotify tools CLI.
 
 import click
 
-from .. import config, spotify
-from .random_album import refresh_album_cache
+from spotify_tools import config, spotify
+from spotify_tools.commands.random_album import refresh_album_cache
 
 
 @click.command(name="refresh-cache")

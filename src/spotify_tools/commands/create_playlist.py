@@ -6,8 +6,8 @@ from pathlib import Path
 
 import click
 
-from .. import config, playlist, spotify
-from ..cli_utils import (
+from spotify_tools import config, playlist, spotify
+from spotify_tools.cli_utils import (
     echo_always,
     echo_verbose,
     extract_tracks_from_search_results,
