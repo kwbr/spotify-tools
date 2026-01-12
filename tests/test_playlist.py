@@ -3,12 +3,20 @@ from __future__ import annotations
 import pytest
 
 from spotify_tools.playlist import (
+    ResolvedTrack,
     calculate_fuzzy_word_similarity,
     calculate_match_quality,
     calculate_string_similarity,
+    create_playlist_from_tracks,
     format_artists,
+    generate_default_name,
     normalize_string,
     parse_item,
+    resolve_items,
+    resolve_uri,
+    search_album,
+    search_auto,
+    search_track,
 )
 
 
@@ -246,3 +254,356 @@ class TestEdgeCases:
     def test_parse_item_parametrized(self, query, expected_type):
         item_type, _ = parse_item(query)
         assert item_type == expected_type
+
+
+class TestSearchFunctions:
+    def test_search_track_found(self, mock_spotify_client):
+        mock_spotify_client.search.return_value = {
+            "tracks": {
+                "items": [
+                    {
+                        "uri": "spotify:track:1",
+                        "name": "Test Track",
+                        "artists": [{"name": "Test Artist"}],
+                    }
+                ]
+            }
+        }
+
+        result = search_track(mock_spotify_client, "Test Track")
+
+        assert result.search_type == "track"
+        assert result.match_quality > 0
+        assert len(result.resolved_tracks) == 1
+
+    def test_search_track_not_found(self, mock_spotify_client):
+        mock_spotify_client.search.return_value = {"tracks": {"items": []}}
+
+        result = search_track(mock_spotify_client, "Nonexistent Track")
+
+        assert result.search_type == "track"
+        assert result.match_quality == 0.0
+        assert len(result.resolved_tracks) == 0
+
+    def test_search_track_error(self, mock_spotify_client):
+        mock_spotify_client.search.side_effect = Exception("API Error")
+
+        result = search_track(mock_spotify_client, "Test Track")
+
+        assert result.search_type == "track"
+        assert result.match_quality == 0.0
+        assert "Search error" in result.quality_reason
+
+    def test_search_album_found(self, mock_spotify_client):
+        mock_spotify_client.search.return_value = {
+            "albums": {
+                "items": [
+                    {
+                        "id": "album1",
+                        "uri": "spotify:album:1",
+                        "name": "Test Album",
+                        "artists": [{"name": "Test Artist"}],
+                    }
+                ]
+            }
+        }
+        mock_spotify_client.album_tracks.return_value = {
+            "items": [
+                {
+                    "uri": "spotify:track:1",
+                    "name": "Track 1",
+                    "artists": [{"name": "Test Artist"}],
+                }
+            ]
+        }
+
+        result = search_album(mock_spotify_client, "Test Album")
+
+        assert result.search_type == "album"
+        assert result.match_quality > 0
+        assert len(result.resolved_tracks) > 0
+
+    def test_search_album_not_found(self, mock_spotify_client):
+        mock_spotify_client.search.return_value = {"albums": {"items": []}}
+
+        result = search_album(mock_spotify_client, "Nonexistent Album")
+
+        assert result.search_type == "album"
+        assert result.match_quality == 0.0
+        assert len(result.resolved_tracks) == 0
+
+    def test_search_album_error(self, mock_spotify_client):
+        mock_spotify_client.search.side_effect = Exception("API Error")
+
+        result = search_album(mock_spotify_client, "Test Album")
+
+        assert result.search_type == "album"
+        assert result.match_quality == 0.0
+        assert "Search error" in result.quality_reason
+
+    def test_search_album_track_resolution_error(self, mock_spotify_client):
+        mock_spotify_client.search.return_value = {
+            "albums": {
+                "items": [
+                    {
+                        "id": "album1",
+                        "uri": "spotify:album:1",
+                        "name": "Test Album",
+                        "artists": [{"name": "Test Artist"}],
+                    }
+                ]
+            }
+        }
+        mock_spotify_client.album_tracks.side_effect = Exception("Track fetch error")
+
+        result = search_album(mock_spotify_client, "Test Album")
+
+        assert result.search_type == "album"
+        assert result.match_quality > 0
+        assert len(result.resolved_tracks) == 0
+
+    def test_search_auto_finds_track(self, mock_spotify_client):
+        mock_spotify_client.search.return_value = {
+            "tracks": {
+                "items": [
+                    {
+                        "uri": "spotify:track:1",
+                        "name": "Test Track",
+                        "artists": [{"name": "Test Artist"}],
+                    }
+                ]
+            }
+        }
+
+        result = search_auto(mock_spotify_client, "Test Track")
+
+        assert "track" in result.search_type
+        assert result.match_quality > 0
+
+    def test_search_auto_finds_album(self, mock_spotify_client):
+        mock_spotify_client.search.side_effect = [
+            {"tracks": {"items": []}},
+            {
+                "albums": {
+                    "items": [
+                        {
+                            "id": "album1",
+                            "uri": "spotify:album:1",
+                            "name": "Test Album",
+                            "artists": [{"name": "Test Artist"}],
+                        }
+                    ]
+                }
+            },
+        ]
+        mock_spotify_client.album_tracks.return_value = {
+            "items": [
+                {
+                    "uri": "spotify:track:1",
+                    "name": "Track 1",
+                    "artists": [{"name": "Test Artist"}],
+                }
+            ]
+        }
+
+        result = search_auto(mock_spotify_client, "Test Album")
+
+        assert "album" in result.search_type
+        assert result.match_quality > 0
+
+
+class TestResolveUri:
+    def test_resolve_track_uri(self, mock_spotify_client):
+        mock_spotify_client.track.return_value = {
+            "uri": "spotify:track:1",
+            "name": "Test Track",
+            "artists": [{"name": "Test Artist"}],
+        }
+
+        tracks = resolve_uri(mock_spotify_client, "spotify:track:1")
+
+        assert tracks is not None
+        assert len(tracks) == 1
+        assert tracks[0].uri == "spotify:track:1"
+
+    def test_resolve_album_uri(self, mock_spotify_client):
+        mock_spotify_client.album.return_value = {
+            "uri": "spotify:album:1",
+            "name": "Test Album",
+            "tracks": {
+                "items": [
+                    {
+                        "uri": "spotify:track:1",
+                        "name": "Track 1",
+                        "artists": [{"name": "Test Artist"}],
+                    },
+                    {
+                        "uri": "spotify:track:2",
+                        "name": "Track 2",
+                        "artists": [{"name": "Test Artist"}],
+                    },
+                ]
+            },
+        }
+
+        tracks = resolve_uri(mock_spotify_client, "spotify:album:1")
+
+        assert tracks is not None
+        assert len(tracks) == 2
+
+    def test_resolve_uri_error(self, mock_spotify_client):
+        mock_spotify_client.track.side_effect = Exception("API Error")
+
+        tracks = resolve_uri(mock_spotify_client, "spotify:track:1")
+
+        assert tracks is None
+
+    def test_resolve_invalid_uri(self, mock_spotify_client):
+        tracks = resolve_uri(mock_spotify_client, "invalid:uri")
+
+        assert tracks is None
+
+
+class TestResolveItems:
+    def test_resolve_items_track(self, mock_spotify_client):
+        mock_spotify_client.search.return_value = {
+            "tracks": {
+                "items": [
+                    {
+                        "uri": "spotify:track:1",
+                        "name": "Test Track",
+                        "artists": [{"name": "Test Artist"}],
+                    }
+                ]
+            }
+        }
+
+        results = resolve_items(mock_spotify_client, ["track:Test Track"])
+
+        assert len(results) == 1
+        assert results[0].search_type == "track"
+
+    def test_resolve_items_album(self, mock_spotify_client):
+        mock_spotify_client.search.return_value = {
+            "albums": {
+                "items": [
+                    {
+                        "id": "album1",
+                        "uri": "spotify:album:1",
+                        "name": "Test Album",
+                        "artists": [{"name": "Test Artist"}],
+                    }
+                ]
+            }
+        }
+        mock_spotify_client.album_tracks.return_value = {
+            "items": [
+                {
+                    "uri": "spotify:track:1",
+                    "name": "Track 1",
+                    "artists": [{"name": "Test Artist"}],
+                }
+            ]
+        }
+
+        results = resolve_items(mock_spotify_client, ["album:Test Album"])
+
+        assert len(results) == 1
+        assert results[0].search_type == "album"
+
+    def test_resolve_items_uri(self, mock_spotify_client):
+        mock_spotify_client.track.return_value = {
+            "uri": "spotify:track:1",
+            "name": "Test Track",
+            "artists": [{"name": "Test Artist"}],
+        }
+
+        results = resolve_items(mock_spotify_client, ["spotify:track:1"])
+
+        assert len(results) == 1
+        assert results[0].search_type == "uri"
+        assert results[0].match_quality == 1.0
+
+    def test_resolve_items_invalid_uri(self, mock_spotify_client):
+        mock_spotify_client.track.side_effect = Exception("Not found")
+
+        results = resolve_items(mock_spotify_client, ["spotify:track:invalid"])
+
+        assert len(results) == 1
+        assert results[0].match_quality == 0.0
+
+
+class TestCreatePlaylist:
+    def test_create_playlist_from_tracks(self, mock_spotify_client):
+        mock_spotify_client.current_user.return_value = {"id": "user123"}
+        mock_spotify_client.user_playlist_create.return_value = {
+            "id": "playlist123"
+        }
+
+        track = ResolvedTrack(
+            uri="spotify:track:1",
+            name="Test Track",
+            artists="Test Artist",
+            source_query="test",
+        )
+
+        playlist_id = create_playlist_from_tracks(
+            mock_spotify_client, [track], name="Test Playlist"
+        )
+
+        assert playlist_id == "playlist123"
+        mock_spotify_client.user_playlist_create.assert_called_once()
+        mock_spotify_client.playlist_add_items.assert_called_once()
+
+    def test_create_playlist_default_name(self, mock_spotify_client):
+        mock_spotify_client.current_user.return_value = {"id": "user123"}
+        mock_spotify_client.user_playlist_create.return_value = {
+            "id": "playlist123"
+        }
+
+        track = ResolvedTrack(
+            uri="spotify:track:1",
+            name="Test Track",
+            artists="Test Artist",
+            source_query="test",
+        )
+
+        playlist_id = create_playlist_from_tracks(mock_spotify_client, [track])
+
+        assert playlist_id == "playlist123"
+
+    def test_create_playlist_large_batch(self, mock_spotify_client):
+        mock_spotify_client.current_user.return_value = {"id": "user123"}
+        mock_spotify_client.user_playlist_create.return_value = {
+            "id": "playlist123"
+        }
+
+        tracks = [
+            ResolvedTrack(
+                uri=f"spotify:track:{i}",
+                name=f"Track {i}",
+                artists="Test Artist",
+                source_query="test",
+            )
+            for i in range(150)
+        ]
+
+        playlist_id = create_playlist_from_tracks(mock_spotify_client, tracks)
+
+        assert playlist_id == "playlist123"
+        assert mock_spotify_client.playlist_add_items.call_count == 2
+
+
+class TestGenerateDefaultName:
+    def test_generate_default_name_format(self):
+        name = generate_default_name()
+
+        assert name.startswith("Playlist ")
+        assert len(name) > len("Playlist ")
+
+    def test_generate_default_name_includes_datetime(self):
+        import re
+
+        name = generate_default_name()
+
+        assert re.search(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}", name)
