@@ -2,9 +2,9 @@
 Performance measurement utilities for Spotify tools.
 """
 
-import time
-import functools
 import contextlib
+import functools
+import time
 from contextlib import contextmanager
 
 
