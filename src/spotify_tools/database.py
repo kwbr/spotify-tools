@@ -593,6 +593,241 @@ def get_total_play_count() -> int:
         return cursor.fetchone()[0]
 
 
+def get_play_count_by_artist() -> dict[str, dict[str, Any]]:
+    """
+    Get play counts grouped by artist.
+
+    Returns:
+        dict: Dictionary with artist name as key and dict with artist info:
+            {artist: {play_count, last_played, album_count, track_count}}
+    """
+    if not database_exists():
+        return {}
+
+    with get_db_connection() as conn:
+        # Flatten artists from JSON arrays and aggregate
+        cursor = conn.execute(
+            """
+            WITH artist_plays AS (
+                SELECT
+                    json_each.value as artist,
+                    played_at,
+                    album_uri,
+                    track_uri
+                FROM play_history, json_each(play_history.artists_json)
+            )
+            SELECT
+                artist,
+                COUNT(*) as play_count,
+                MAX(played_at) as last_played,
+                COUNT(DISTINCT album_uri) as album_count,
+                COUNT(DISTINCT track_uri) as track_count
+            FROM artist_plays
+            GROUP BY artist
+            ORDER BY play_count DESC
+            """
+        )
+
+        return {
+            row[0]: {
+                "play_count": row[1],
+                "last_played": row[2],
+                "album_count": row[3],
+                "track_count": row[4],
+            }
+            for row in cursor.fetchall()
+        }
+
+
+def get_plays_in_time_range(
+    since: str | None = None, until: str | None = None
+) -> list[dict[str, Any]]:
+    """
+    Get plays within a specific time range.
+
+    Args:
+        since: ISO timestamp for start of range (inclusive).
+        until: ISO timestamp for end of range (inclusive).
+
+    Returns:
+        list: List of play dictionaries with full details.
+    """
+    if not database_exists():
+        return []
+
+    with get_db_connection() as conn:
+        conditions = []
+        params = []
+
+        if since:
+            conditions.append("played_at >= ?")
+            params.append(since)
+        if until:
+            conditions.append("played_at <= ?")
+            params.append(until)
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+        cursor = conn.execute(
+            f"""
+            SELECT track_uri, track_name, artists_json, album_uri,
+                   album_name, album_artists_json, played_at
+            FROM play_history
+            {where_clause}
+            ORDER BY played_at DESC
+            """,
+            params,
+        )
+
+        return [
+            {
+                "track_uri": row[0],
+                "track_name": row[1],
+                "artists": json.loads(row[2]),
+                "album_uri": row[3],
+                "album_name": row[4],
+                "album_artists": json.loads(row[5]) if row[5] else [],
+                "played_at": row[6],
+            }
+            for row in cursor.fetchall()
+        ]
+
+
+def get_play_trends_by_day(days: int = 30) -> dict[str, int]:
+    """
+    Get play counts grouped by day for the last N days.
+
+    Args:
+        days: Number of days to include.
+
+    Returns:
+        dict: Dictionary with date string (YYYY-MM-DD) as key and play count.
+    """
+    if not database_exists():
+        return {}
+
+    with get_db_connection() as conn:
+        cursor = conn.execute(
+            """
+            SELECT DATE(played_at) as play_date, COUNT(*) as play_count
+            FROM play_history
+            WHERE played_at >= datetime('now', ? || ' days')
+            GROUP BY play_date
+            ORDER BY play_date
+            """,
+            (f"-{days}",),
+        )
+
+        return {row[0]: row[1] for row in cursor.fetchall()}
+
+
+def get_recently_played(limit: int = 50) -> list[dict[str, Any]]:
+    """
+    Get recently played tracks with full details.
+
+    Args:
+        limit: Number of recent plays to return.
+
+    Returns:
+        list: List of play dictionaries with full details.
+    """
+    if not database_exists():
+        return []
+
+    with get_db_connection() as conn:
+        cursor = conn.execute(
+            """
+            SELECT track_uri, track_name, artists_json, album_uri,
+                   album_name, album_artists_json, played_at
+            FROM play_history
+            ORDER BY played_at DESC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+
+        return [
+            {
+                "track_uri": row[0],
+                "track_name": row[1],
+                "artists": json.loads(row[2]),
+                "album_uri": row[3],
+                "album_name": row[4],
+                "album_artists": json.loads(row[5]) if row[5] else [],
+                "played_at": row[6],
+            }
+            for row in cursor.fetchall()
+        ]
+
+
+def get_plays_by_hour() -> dict[int, int]:
+    """
+    Get play counts grouped by hour of day (0-23).
+
+    Returns:
+        dict: Dictionary with hour (0-23) as key and play count.
+    """
+    if not database_exists():
+        return {}
+
+    with get_db_connection() as conn:
+        cursor = conn.execute(
+            """
+            SELECT CAST(strftime('%H', played_at) AS INTEGER) as hour,
+                   COUNT(*) as play_count
+            FROM play_history
+            GROUP BY hour
+            ORDER BY hour
+            """
+        )
+
+        return {row[0]: row[1] for row in cursor.fetchall()}
+
+
+def get_plays_by_day_of_week() -> dict[int, int]:
+    """
+    Get play counts grouped by day of week (0=Sunday, 6=Saturday).
+
+    Returns:
+        dict: Dictionary with day number as key and play count.
+    """
+    if not database_exists():
+        return {}
+
+    with get_db_connection() as conn:
+        cursor = conn.execute(
+            """
+            SELECT CAST(strftime('%w', played_at) AS INTEGER) as day_of_week,
+                   COUNT(*) as play_count
+            FROM play_history
+            GROUP BY day_of_week
+            ORDER BY day_of_week
+            """
+        )
+
+        return {row[0]: row[1] for row in cursor.fetchall()}
+
+
+def get_unique_artist_count() -> int:
+    """
+    Get the count of unique artists played.
+
+    Returns:
+        int: Number of unique artists.
+    """
+    if not database_exists():
+        return 0
+
+    with get_db_connection() as conn:
+        cursor = conn.execute(
+            """
+            SELECT COUNT(DISTINCT json_each.value)
+            FROM play_history, json_each(play_history.artists_json)
+            """
+        )
+        return cursor.fetchone()[0]
+
+
 def get_syncs_dir() -> Path:
     """
     Get the directory for storing raw sync files.
