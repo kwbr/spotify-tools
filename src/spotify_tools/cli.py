@@ -10,6 +10,8 @@ from .commands import (
     list_albums,
     random_album,
     refresh_cache,
+    stats,
+    sync_history,
 )
 
 
@@ -31,3 +33,5 @@ cli.add_command(refresh_cache)
 cli.add_command(list_albums)
 cli.add_command(create_playlist)
 cli.add_command(configure)
+cli.add_command(sync_history)
+cli.add_command(stats)

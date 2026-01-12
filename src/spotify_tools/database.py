@@ -57,6 +57,34 @@ def initialize_db(db_path: Path | None = None) -> None:
         # Create index on year for efficient filtering
         conn.execute("CREATE INDEX IF NOT EXISTS idx_albums_year ON albums(year)")
 
+        # Create play_history table for tracking listening history
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS play_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            track_uri TEXT NOT NULL,
+            track_name TEXT NOT NULL,
+            artists_json TEXT NOT NULL,
+            album_uri TEXT NOT NULL,
+            album_name TEXT NOT NULL,
+            played_at TEXT NOT NULL,
+            UNIQUE(track_uri, played_at)
+        )
+        """)
+
+        # Create indexes for efficient querying
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_play_history_played_at "
+            "ON play_history(played_at)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_play_history_album_uri "
+            "ON play_history(album_uri)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_play_history_track_uri "
+            "ON play_history(track_uri)"
+        )
+
         # Set creation timestamp
         set_metadata(conn, "created_at", str(time.time()))
 
@@ -374,3 +402,183 @@ def calculate_cache_age() -> tuple[int, int]:
         days = int(age_seconds / (60 * 60 * 24))
         hours = int((age_seconds % (60 * 60 * 24)) / (60 * 60))
         return (days, hours)
+
+
+def save_play_history(plays: list[dict[str, Any]]) -> int:
+    """
+    Save play history entries to the database.
+
+    Args:
+        plays: List of play history dictionaries with keys:
+            track_uri, track_name, artists_json, album_uri,
+            album_name, played_at
+
+    Returns:
+        int: Number of new entries added (excludes duplicates).
+    """
+    if not database_exists():
+        initialize_db()
+
+    # Ensure play_history table exists (for existing databases)
+    db_path = get_db_path()
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS play_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            track_uri TEXT NOT NULL,
+            track_name TEXT NOT NULL,
+            artists_json TEXT NOT NULL,
+            album_uri TEXT NOT NULL,
+            album_name TEXT NOT NULL,
+            played_at TEXT NOT NULL,
+            UNIQUE(track_uri, played_at)
+        )
+        """)
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_play_history_played_at "
+            "ON play_history(played_at)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_play_history_album_uri "
+            "ON play_history(album_uri)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_play_history_track_uri "
+            "ON play_history(track_uri)"
+        )
+
+    added_count = 0
+    with get_db_connection() as conn:
+        for play in plays:
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO play_history
+                    (track_uri, track_name, artists_json, album_uri,
+                     album_name, played_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        play["track_uri"],
+                        play["track_name"],
+                        play["artists_json"],
+                        play["album_uri"],
+                        play["album_name"],
+                        play["played_at"],
+                    ),
+                )
+                added_count += 1
+            except sqlite3.IntegrityError:
+                # Duplicate entry (same track_uri and played_at), skip
+                pass
+
+    return added_count
+
+
+def get_last_sync_time() -> str | None:
+    """
+    Get the timestamp of the last play history sync.
+
+    Returns:
+        str | None: ISO timestamp of last sync, or None if never synced.
+    """
+    if not database_exists():
+        return None
+
+    with get_db_connection() as conn:
+        return get_metadata(conn, "last_play_history_sync")
+
+
+def set_last_sync_time(timestamp: str) -> None:
+    """
+    Set the timestamp of the last play history sync.
+
+    Args:
+        timestamp: ISO timestamp string.
+    """
+    if not database_exists():
+        initialize_db()
+
+    with get_db_connection() as conn:
+        set_metadata(conn, "last_play_history_sync", timestamp)
+
+
+def get_play_count_by_album() -> dict[str, dict[str, Any]]:
+    """
+    Get play counts grouped by album.
+
+    Returns:
+        dict: Dictionary with album_uri as key and dict with album info:
+            {album_uri: {name, play_count, last_played}}
+    """
+    if not database_exists():
+        return {}
+
+    with get_db_connection() as conn:
+        cursor = conn.execute(
+            """
+            SELECT album_uri, album_name, COUNT(*) as play_count,
+                   MAX(played_at) as last_played
+            FROM play_history
+            GROUP BY album_uri, album_name
+            ORDER BY play_count DESC
+            """
+        )
+
+        return {
+            row[0]: {
+                "name": row[1],
+                "play_count": row[2],
+                "last_played": row[3],
+            }
+            for row in cursor.fetchall()
+        }
+
+
+def get_play_count_by_track() -> dict[str, dict[str, Any]]:
+    """
+    Get play counts grouped by track.
+
+    Returns:
+        dict: Dictionary with track_uri as key and dict with track info:
+            {track_uri: {name, artists, album_name, play_count, last_played}}
+    """
+    if not database_exists():
+        return {}
+
+    with get_db_connection() as conn:
+        cursor = conn.execute(
+            """
+            SELECT track_uri, track_name, artists_json, album_name,
+                   COUNT(*) as play_count, MAX(played_at) as last_played
+            FROM play_history
+            GROUP BY track_uri, track_name, artists_json, album_name
+            ORDER BY play_count DESC
+            """
+        )
+
+        return {
+            row[0]: {
+                "name": row[1],
+                "artists": json.loads(row[2]),
+                "album_name": row[3],
+                "play_count": row[4],
+                "last_played": row[5],
+            }
+            for row in cursor.fetchall()
+        }
+
+
+def get_total_play_count() -> int:
+    """
+    Get the total number of plays recorded.
+
+    Returns:
+        int: Total play count.
+    """
+    if not database_exists():
+        return 0
+
+    with get_db_connection() as conn:
+        cursor = conn.execute("SELECT COUNT(*) FROM play_history")
+        return cursor.fetchone()[0]
