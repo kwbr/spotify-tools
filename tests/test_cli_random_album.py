@@ -37,6 +37,16 @@ def test_random_album_year_filter(runner, temp_db, year):
     assert result.exit_code == 0
     assert "spotify:album:" in result.output
 
+    expected_uris = {
+        2020: ["spotify:album:1", "spotify:album:2"],
+        2021: ["spotify:album:3", "spotify:album:4", "spotify:album:5"],
+        2022: ["spotify:album:6"],
+    }
+
+    uris = [line for line in result.output.strip().split("\n") if "spotify:album:" in line]
+    for uri in uris:
+        assert any(expected_uri in uri for expected_uri in expected_uris[year])
+
 
 def test_random_album_year_filter_2020_specific(runner, temp_db):
     result = runner.invoke(cli, ["random-album", "--year", "2020", "--count", "10"])
@@ -63,6 +73,21 @@ def test_random_album_verbose(runner, temp_db):
 
     assert result.exit_code == 0
     assert "spotify:album:" in result.output
+    assert any(
+        album_name in result.output
+        for album_name in [
+            "Album 2020 One",
+            "Album 2020 Two",
+            "Album 2021 One",
+            "Album 2021 Two",
+            "Album 2021 Three",
+            "Album 2022 One",
+        ]
+    )
+    assert any(
+        artist in result.output
+        for artist in ["Artist A", "Artist B", "Artist C", "Artist D", "Artist E", "Artist F", "Artist G"]
+    )
 
 
 def test_random_album_very_verbose(runner, temp_db):
@@ -70,6 +95,22 @@ def test_random_album_very_verbose(runner, temp_db):
 
     assert result.exit_code == 0
     assert "spotify:album:" in result.output
+    assert any(
+        album_name in result.output
+        for album_name in [
+            "Album 2020 One",
+            "Album 2020 Two",
+            "Album 2021 One",
+            "Album 2021 Two",
+            "Album 2021 Three",
+            "Album 2022 One",
+        ]
+    )
+    assert any(
+        artist in result.output
+        for artist in ["Artist A", "Artist B", "Artist C", "Artist D", "Artist E", "Artist F", "Artist G"]
+    )
+    assert "added_at" in result.output.lower() or "2020" in result.output or "2021" in result.output or "2022" in result.output
 
 
 def test_random_album_with_timing(runner, temp_db):
