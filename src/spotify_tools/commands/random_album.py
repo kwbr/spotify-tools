@@ -4,12 +4,12 @@ Random album command for Spotify tools CLI.
 
 import click
 
-from .. import album, cache, config, database, spotify, perf
-from ..cli_utils import (
+from spotify_tools import album, cache, database, perf
+from spotify_tools.cli_utils import (
+    create_progress_callback,
     echo_always,
     echo_debug,
     echo_verbose,
-    create_progress_callback,
     output_album,
 )
 
@@ -79,17 +79,15 @@ def refresh_album_cache(ctx, sp, max_workers=5, show_progress=True):
         ) as bar:
             progress_callback = create_progress_callback(bar)
 
-            albums_by_year = album.fetch_all_albums_parallel(
+            album.fetch_all_albums_parallel(
                 sp, progress_callback, max_workers=max_workers
             )
     else:
-        albums_by_year = album.fetch_all_albums_parallel(sp, max_workers=max_workers)
+        album.fetch_all_albums_parallel(sp, max_workers=max_workers)
 
     # Report cache refresh
     total_albums = database.get_album_count()
     echo_always(f"Album database refreshed with {total_albums} albums.")
-
-    # Don't need to return anything, we're saving directly to the database
 
 
 def handle_year_filter_sql(ctx, year, count):
