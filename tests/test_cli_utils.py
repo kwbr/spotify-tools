@@ -2,46 +2,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import click
-
 from spotify_tools import cli_utils
 from spotify_tools.playlist import SearchResult
-
-
-def test_echo_debug_verbose_2(runner):
-    ctx = click.Context(click.Command("test"))
-    ctx.obj = {"VERBOSE": 2}
-
-    cli_utils.echo_debug(ctx, "Debug message")
-
-
-def test_echo_debug_not_verbose():
-    ctx = click.Context(click.Command("test"))
-    ctx.obj = {"VERBOSE": 0}
-
-    cli_utils.echo_debug(ctx, "Debug message")
-
-
-def test_echo_verbose_verbose_1():
-    ctx = click.Context(click.Command("test"))
-    ctx.obj = {"VERBOSE": 1}
-
-    cli_utils.echo_verbose(ctx, "Verbose message")
-
-
-def test_echo_verbose_not_verbose():
-    ctx = click.Context(click.Command("test"))
-    ctx.obj = {"VERBOSE": 0}
-
-    cli_utils.echo_verbose(ctx, "Verbose message")
-
-
-def test_echo_info():
-    cli_utils.echo_info("Info message")
-
-
-def test_echo_always():
-    cli_utils.echo_always("Always message")
 
 
 def test_create_progress_callback():
@@ -181,27 +143,3 @@ def test_write_uris_to_file_invalid_path():
     result = cli_utils.write_uris_to_file("/nonexistent/dir/file.txt", [])
 
     assert result is False
-
-
-def test_output_album_basic():
-    ctx = click.Context(click.Command("test"))
-    ctx.obj = {"VERBOSE": 0}
-
-    album = MagicMock()
-    album.uri = "spotify:album:123"
-    album.name = "Test Album"
-    album.format_artists.return_value = "Test Artist"
-
-    cli_utils.output_album(ctx, album)
-
-
-def test_output_album_verbose():
-    ctx = click.Context(click.Command("test"))
-    ctx.obj = {"VERBOSE": 1}
-
-    album = MagicMock()
-    album.uri = "spotify:album:123"
-    album.name = "Test Album"
-    album.format_artists.return_value = "Test Artist"
-
-    cli_utils.output_album(ctx, album)

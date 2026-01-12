@@ -133,7 +133,12 @@ def test_fetch_all_albums_parallel_basic(mock_spotify_client, temp_cache_dir):
     result = album.fetch_all_albums_parallel(mock_spotify_client)
 
     assert isinstance(result, dict)
-    assert len(result) >= 0
+    assert "2020" in result
+    assert "2021" in result
+    assert len(result["2020"]) == 1
+    assert len(result["2021"]) == 1
+    assert result["2020"][0]["uri"] == "spotify:album:1"
+    assert result["2021"][0]["uri"] == "spotify:album:2"
 
 
 def test_fetch_all_albums_with_progress_callback(mock_spotify_client):
@@ -163,7 +168,10 @@ def test_fetch_all_albums_with_progress_callback(mock_spotify_client):
     )
 
     assert isinstance(result, dict)
+    assert "2020" in result
+    assert len(result["2020"]) == 1
     assert len(progress_calls) > 0
+    assert progress_calls[-1] == (1, 1)
 
 
 def test_fetch_all_albums_with_max_workers(mock_spotify_client):
@@ -186,3 +194,5 @@ def test_fetch_all_albums_with_max_workers(mock_spotify_client):
     result = album.fetch_all_albums_parallel(mock_spotify_client, max_workers=2)
 
     assert isinstance(result, dict)
+    assert "2020" in result
+    assert len(result["2020"]) == 1

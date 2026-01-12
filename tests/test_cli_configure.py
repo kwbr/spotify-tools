@@ -97,7 +97,7 @@ def test_configure_with_error(runner, temp_config_dir):
             ],
         )
 
-        assert result.exit_code in [0, 1]
+        assert result.exit_code == 0
         assert "Error saving configuration" in result.output
 
 

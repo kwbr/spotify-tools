@@ -35,9 +35,9 @@ class SpotifyClient:
                     # Access recently played tracks for play history tracking
                     "user-read-recently-played",
                 ),
-                client_id=conf["client_id"],
-                client_secret=conf["client_secret"],
-                redirect_uri=conf["redirect_uri"],
+                client_id=conf["spotify"]["client_id"],
+                client_secret=conf["spotify"]["client_secret"],
+                redirect_uri=conf["spotify"]["redirect_uri"],
                 cache_handler=spotipy.CacheFileHandler(cache_path=token_cache_path),
             ),
         )

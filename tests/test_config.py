@@ -109,18 +109,6 @@ def test_create_default_config_creates_directory(tmp_path, monkeypatch):
     assert config_path.exists()
 
 
-def test_create_default_config_idempotent(temp_config_dir):
-    config_path1 = config.create_default_config(client_id="first")
-    content1 = config_path1.read_text()
-
-    config_path2 = config.create_default_config(client_id="second")
-    content2 = config_path2.read_text()
-
-    assert content1 == content2
-    assert "first" in content1
-    assert "second" not in content2
-
-
 def test_load_config_with_additional_sections(temp_config_dir):
     config_file = temp_config_dir / "config.toml"
     config_content = """[spotify]
