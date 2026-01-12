@@ -45,7 +45,8 @@ def create_playlist_logic(sp, ctx, all_items, name=None, dry_run=False, output=N
         output: Optional file path to write URIs
 
     Returns:
-        dict: Results with keys: success, playlist_id (if created), tracks_count, skipped_count
+        dict: Results with keys: success, playlist_id (if created),
+              tracks_count, skipped_count
     """
     if not all_items:
         echo_info("No items specified. Provide items as arguments or use --file.")
@@ -55,8 +56,7 @@ def create_playlist_logic(sp, ctx, all_items, name=None, dry_run=False, output=N
 
     if dry_run:
         return _handle_dry_run(sp, ctx, all_items, name, output)
-    else:
-        return _handle_create_playlist(sp, ctx, all_items, name, output)
+    return _handle_create_playlist(sp, ctx, all_items, name, output)
 
 
 def _handle_dry_run(sp, ctx, all_items, name, output):
@@ -79,29 +79,22 @@ def _handle_dry_run(sp, ctx, all_items, name, output):
 
         if result.found_item:
             is_album_type = (
-                result.search_type == "album"
-                or "album" in result.search_type
+                result.search_type == "album" or "album" in result.search_type
             )
             if is_album_type:
                 item_name = result.found_item.get("name", "Unknown")
                 artists_list = result.found_item.get("artists", [])
-                artists = ", ".join(
-                    [artist["name"] for artist in artists_list]
-                )
+                artists = ", ".join([artist["name"] for artist in artists_list])
                 echo_info(f'    Found: "{item_name}" by {artists}')
             else:
                 item_name = result.found_item.get("name", "Unknown")
                 artists_list = result.found_item.get("artists", [])
-                artists = ", ".join(
-                    [artist["name"] for artist in artists_list]
-                )
+                artists = ", ".join([artist["name"] for artist in artists_list])
                 echo_info(f'    Found: "{item_name}" by {artists}')
         else:
             echo_info("    Found: No results")
 
-        quality_text = (
-            f"{result.match_quality:.2f} - {result.quality_reason}"
-        )
+        quality_text = f"{result.match_quality:.2f} - {result.quality_reason}"
         echo_info(f"    Quality: {quality_text}")
         echo_info(f"    Tracks: {len(result.resolved_tracks)} added")
         echo_info("")
@@ -148,9 +141,7 @@ def _handle_dry_run(sp, ctx, all_items, name, output):
             uris = [track.uri for track in good_tracks]
             uri_args = " ".join(f'"{uri}"' for uri in uris)
             playlist_name_part = f' --name "{name}"' if name else ""
-            echo_info(
-                f"spt create-playlist{playlist_name_part} {uri_args}"
-            )
+            echo_info(f"spt create-playlist{playlist_name_part} {uri_args}")
 
     return {
         "success": True,
@@ -163,14 +154,10 @@ def _handle_dry_run(sp, ctx, all_items, name, output):
 def _handle_create_playlist(sp, ctx, all_items, name, output):
     """Handle normal mode: create playlist."""
     search_results = playlist.resolve_items(sp, all_items)
-    resolved_tracks, skipped_items = extract_tracks_from_search_results(
-        search_results
-    )
+    resolved_tracks, skipped_items = extract_tracks_from_search_results(search_results)
 
     # Create playlist from resolved tracks
-    playlist_id = playlist.create_playlist_from_tracks(
-        sp, resolved_tracks, name
-    )
+    playlist_id = playlist.create_playlist_from_tracks(sp, resolved_tracks, name)
     tracks_added = len(resolved_tracks)
 
     # Report results
