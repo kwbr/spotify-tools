@@ -5,7 +5,7 @@ List albums command for Spotify tools CLI.
 import click
 
 from spotify_tools import album, database
-from spotify_tools.cli_utils import echo_always, output_album
+from spotify_tools.cli_utils import echo_info, output_album
 
 
 @click.command()
@@ -23,16 +23,16 @@ from spotify_tools.cli_utils import echo_always, output_album
 def list_albums(ctx, sort, year):
     """List all albums in your library with sorting options."""
     if not database.database_exists():
-        echo_always("No album cache found. Run 'spt refresh-cache' to create one.")
+        echo_info("No album cache found. Run 'spt refresh-cache' to create one.")
         return
 
     albums = album.get_albums_by_year(year)
 
     if not albums:
         if year:
-            echo_always(f"No albums from {year} found in your library.")
+            echo_info(f"No albums from {year} found in your library.")
         else:
-            echo_always("No albums found in your library.")
+            echo_info("No albums found in your library.")
         return
 
     if sort == "added":
@@ -48,7 +48,7 @@ def list_albums(ctx, sort, year):
         )
 
     year_filter = f" from {year}" if year else ""
-    echo_always(f"Total albums{year_filter}: {len(albums)}\n")
+    echo_info(f"Total albums{year_filter}: {len(albums)}\n")
 
     for alb in albums:
         output_album(ctx, alb)

@@ -5,7 +5,7 @@ Configure command for Spotify tools CLI.
 import click
 
 from spotify_tools import config
-from spotify_tools.cli_utils import echo_always
+from spotify_tools.cli_utils import echo_info
 
 
 @click.command()
@@ -32,7 +32,7 @@ def configure(ctx, client_id, client_secret, redirect_uri):
             client_secret=client_secret,
             redirect_uri=redirect_uri,
         )
-        echo_always(f"Configuration saved to {config_path}")
+        echo_info(f"Configuration saved to {config_path}")
     except Exception as e:
-        echo_always(f"Error saving configuration: {e}")
+        echo_info(f"Error saving configuration: {e}")
         return 1

@@ -7,8 +7,8 @@ import click
 from spotify_tools import album, cache, database, perf
 from spotify_tools.cli_utils import (
     create_progress_callback,
-    echo_always,
     echo_debug,
+    echo_info,
     echo_verbose,
     output_album,
 )
@@ -50,7 +50,7 @@ def random_album(ctx, count, year, timing):
             handle_random_selection_sql(ctx, count)
     else:
         # No cache available, exit with error
-        echo_always(
+        echo_info(
             "Error: No album cache found. Please run 'spt refresh-cache' first."
         )
         raise click.Abort()
@@ -86,7 +86,7 @@ def refresh_album_cache(ctx, sp, max_workers=5, show_progress=True):
 
     # Report cache refresh
     total_albums = database.get_album_count()
-    echo_always(f"Album database refreshed with {total_albums} albums.")
+    echo_info(f"Album database refreshed with {total_albums} albums.")
 
 
 def handle_year_filter_sql(ctx, year, count):
@@ -100,7 +100,7 @@ def handle_year_filter_sql(ctx, year, count):
         selected_albums = album.get_random_albums(count, year, verbose)
 
     if not selected_albums:
-        echo_always(f"No albums from {year} found in your library.")
+        echo_info(f"No albums from {year} found in your library.")
         return
 
     echo_verbose(ctx, f"Selected {len(selected_albums)} albums from {year}.")
@@ -124,4 +124,4 @@ def handle_random_selection_sql(ctx, count):
         for alb in selected_albums:
             output_album(ctx, alb)
     else:
-        echo_always("No albums found in your library.")
+        echo_info("No albums found in your library.")

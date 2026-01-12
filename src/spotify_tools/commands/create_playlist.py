@@ -8,7 +8,7 @@ import click
 
 from spotify_tools import config, playlist, spotify
 from spotify_tools.cli_utils import (
-    echo_always,
+    echo_info,
     echo_verbose,
     extract_tracks_from_search_results,
     write_uris_to_file,
@@ -56,11 +56,11 @@ def create_playlist(ctx, items, name, file_path, dry_run, output):
                 file_items = [line.strip() for line in f if line.strip()]
                 all_items.extend(file_items)
         except Exception as e:
-            echo_always(f"Error reading file {file_path}: {e}")
+            echo_info(f"Error reading file {file_path}: {e}")
             return 1
 
     if not all_items:
-        echo_always("No items specified. Provide items as arguments or use --file.")
+        echo_info("No items specified. Provide items as arguments or use --file.")
         return 1
 
     echo_verbose(ctx, f"Processing {len(all_items)} items...")
@@ -72,8 +72,8 @@ def create_playlist(ctx, items, name, file_path, dry_run, output):
                 # Dry-run mode: show detailed search results
                 search_results = playlist.resolve_items(sp, all_items)
 
-                echo_always("Search Quality Analysis")
-                echo_always("-" * 40)
+                echo_info("Search Quality Analysis")
+                echo_info("-" * 40)
 
                 all_resolved_tracks = []
                 poor_matches = []
@@ -83,8 +83,8 @@ def create_playlist(ctx, items, name, file_path, dry_run, output):
                     if result.match_quality < 0.4:
                         poor_matches.append(result)
 
-                    echo_always(f"{i:2}. Query: {result.query}")
-                    echo_always(f"    Type: {result.search_type}")
+                    echo_info(f"{i:2}. Query: {result.query}")
+                    echo_info(f"    Type: {result.search_type}")
 
                     if result.found_item:
                         is_album_type = (
@@ -97,39 +97,39 @@ def create_playlist(ctx, items, name, file_path, dry_run, output):
                             artists = ", ".join(
                                 [artist["name"] for artist in artists_list]
                             )
-                            echo_always(f'    Found: "{item_name}" by {artists}')
+                            echo_info(f'    Found: "{item_name}" by {artists}')
                         else:
                             item_name = result.found_item.get("name", "Unknown")
                             artists_list = result.found_item.get("artists", [])
                             artists = ", ".join(
                                 [artist["name"] for artist in artists_list]
                             )
-                            echo_always(f'    Found: "{item_name}" by {artists}')
+                            echo_info(f'    Found: "{item_name}" by {artists}')
                     else:
-                        echo_always("    Found: No results")
+                        echo_info("    Found: No results")
 
                     quality_text = (
                         f"{result.match_quality:.2f} - {result.quality_reason}"
                     )
-                    echo_always(f"    Quality: {quality_text}")
-                    echo_always(f"    Tracks: {len(result.resolved_tracks)} added")
-                    echo_always("")
+                    echo_info(f"    Quality: {quality_text}")
+                    echo_info(f"    Tracks: {len(result.resolved_tracks)} added")
+                    echo_info("")
 
                     # Collect all resolved tracks
                     all_resolved_tracks.extend(result.resolved_tracks)
 
                 # Summary
-                echo_always("-" * 40)
-                echo_always("Summary:")
-                echo_always(f"  Items processed: {len(search_results)}")
-                echo_always(f"  Tracks found: {len(all_resolved_tracks)}")
-                echo_always(f"  Poor matches: {len(poor_matches)}")
+                echo_info("-" * 40)
+                echo_info("Summary:")
+                echo_info(f"  Items processed: {len(search_results)}")
+                echo_info(f"  Tracks found: {len(all_resolved_tracks)}")
+                echo_info(f"  Poor matches: {len(poor_matches)}")
 
                 if poor_matches:
-                    echo_always("")
-                    echo_always("Poor quality matches:")
+                    echo_info("")
+                    echo_info("Poor quality matches:")
                     for result in poor_matches:
-                        echo_always(f'  "{result.query}" -> {result.quality_reason}')
+                        echo_info(f'  "{result.query}" -> {result.quality_reason}')
 
                 # Show command to create playlist with URIs from good matches only
                 good_tracks = [
@@ -140,24 +140,24 @@ def create_playlist(ctx, items, name, file_path, dry_run, output):
                 ]
 
                 if good_tracks:
-                    echo_always("")
+                    echo_info("")
                     if output:
                         # Write URIs to file and show file-based command
                         if write_uris_to_file(output, good_tracks):
-                            echo_always(f"Good match URIs written to: {output}")
-                            echo_always("Command to create playlist:")
+                            echo_info(f"Good match URIs written to: {output}")
+                            echo_info("Command to create playlist:")
                             name_part = f' --name "{name}"' if name else ""
                             cmd = f"spt create-playlist --file {output}{name_part}"
-                            echo_always(cmd)
+                            echo_info(cmd)
                         else:
-                            echo_always(f"Error writing to file: {output}")
+                            echo_info(f"Error writing to file: {output}")
                     else:
                         # Show command with URIs (existing behavior)
-                        echo_always("Command to create playlist (good matches only):")
+                        echo_info("Command to create playlist (good matches only):")
                         uris = [track.uri for track in good_tracks]
                         uri_args = " ".join(f'"{uri}"' for uri in uris)
                         playlist_name_part = f' --name "{name}"' if name else ""
-                        echo_always(
+                        echo_info(
                             f"spt create-playlist{playlist_name_part} {uri_args}"
                         )
             else:
@@ -174,21 +174,21 @@ def create_playlist(ctx, items, name, file_path, dry_run, output):
                 tracks_added = len(resolved_tracks)
 
                 # Report results
-                echo_always("Playlist created successfully!")
-                echo_always(f"Playlist ID: {playlist_id}")
-                echo_always(f"Tracks added: {tracks_added}")
+                echo_info("Playlist created successfully!")
+                echo_info(f"Playlist ID: {playlist_id}")
+                echo_info(f"Tracks added: {tracks_added}")
 
                 # Write URIs to output file if requested
                 if output:
                     if write_uris_to_file(output, resolved_tracks):
-                        echo_always(f"Resolved URIs written to: {output}")
+                        echo_info(f"Resolved URIs written to: {output}")
                     else:
-                        echo_always(f"Warning: Could not write to file: {output}")
+                        echo_info(f"Warning: Could not write to file: {output}")
 
                 if skipped_items:
-                    echo_always(f"Skipped {len(skipped_items)} items (not found):")
+                    echo_info(f"Skipped {len(skipped_items)} items (not found):")
                     for item in skipped_items:
-                        echo_always(f"  - {item}")
+                        echo_info(f"  - {item}")
 
                 # Show playlist URL in verbose mode
                 if ctx.obj["VERBOSE"] >= 1:
@@ -197,5 +197,5 @@ def create_playlist(ctx, items, name, file_path, dry_run, output):
 
     except Exception as e:
         error_context = "resolving tracks" if dry_run else "creating playlist"
-        echo_always(f"Error {error_context}: {e}")
+        echo_info(f"Error {error_context}: {e}")
         return 1

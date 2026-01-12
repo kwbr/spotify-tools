@@ -12,17 +12,22 @@ import click
 def echo_debug(ctx, message):
     """Echo debug message if verbose level >= 2."""
     if ctx.obj["VERBOSE"] >= 2:
-        click.echo(f"DEBUG: {message}")
+        click.echo(f"DEBUG: {message}", err=True)
 
 
 def echo_verbose(ctx, message):
     """Echo verbose message if verbose level >= 1."""
     if ctx.obj["VERBOSE"] >= 1:
-        click.echo(f"INFO: {message}")
+        click.echo(f"INFO: {message}", err=True)
+
+
+def echo_info(message):
+    """Echo informational message to stderr."""
+    click.echo(message, err=True)
 
 
 def echo_always(message):
-    """Echo message regardless of verbosity level."""
+    """Echo message to stdout regardless of verbosity level."""
     click.echo(message)
 
 
