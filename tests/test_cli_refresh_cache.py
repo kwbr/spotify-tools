@@ -51,6 +51,7 @@ def test_refresh_cache_basic(mock_ctx, temp_db, mock_spotify_client):
     mock_spotify_client.current_user_saved_albums.assert_called()
 
     from spotify_tools import database
+
     albums = database.get_albums_by_year(db_path=temp_db)
     assert len(albums) == 2
     assert any(a.uri == "spotify:album:1" for a in albums)
@@ -103,6 +104,7 @@ def test_refresh_cache_empty_library(mock_ctx, temp_db, mock_spotify_client):
     mock_spotify_client.current_user_saved_albums.assert_called()
 
     from spotify_tools import database
+
     albums = database.get_albums_by_year(db_path=temp_db)
     assert len(albums) == 0
 
@@ -189,6 +191,7 @@ def test_refresh_cache_with_pagination(mock_ctx, temp_db, mock_spotify_client):
     assert mock_spotify_client.current_user_saved_albums.call_count >= 1
 
     from spotify_tools import database
+
     albums = database.get_albums_by_year(db_path=temp_db)
     assert len(albums) >= 1
     assert any(a.uri == "spotify:album:1" for a in albums)

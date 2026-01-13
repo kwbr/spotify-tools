@@ -5,12 +5,15 @@ Spotify client functionality with context manager support.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
 from . import config
+
+if TYPE_CHECKING:
+    from types import TracebackType
 
 
 class SpotifyClient:
@@ -46,7 +49,12 @@ class SpotifyClient:
         )
         return self.client
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> bool:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool:
         """Clean up resources."""
         self.client = None
         return False  # Don't suppress exceptions

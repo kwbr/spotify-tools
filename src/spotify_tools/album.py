@@ -8,22 +8,16 @@ import concurrent.futures
 import random
 import secrets
 import threading
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
+    from .playlist import SpotifyClient
+
 from . import cache, database
 from .types import Album
-
-
-class SpotifyClient(Protocol):
-    """Protocol defining the Spotify client interface used in this module."""
-
-    def current_user_saved_albums(
-        self, limit: int = 20, offset: int = 0
-    ) -> dict[str, Any]: ...
 
 
 def get_total_album_count(sp: SpotifyClient) -> int:

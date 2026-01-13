@@ -43,7 +43,9 @@ def test_random_album_year_filter(runner, temp_db, year):
         2022: ["spotify:album:6"],
     }
 
-    uris = [line for line in result.output.strip().split("\n") if "spotify:album:" in line]
+    uris = [
+        line for line in result.output.strip().split("\n") if "spotify:album:" in line
+    ]
     for uri in uris:
         assert any(expected_uri in uri for expected_uri in expected_uris[year])
 
@@ -86,7 +88,15 @@ def test_random_album_verbose(runner, temp_db):
     )
     assert any(
         artist in result.output
-        for artist in ["Artist A", "Artist B", "Artist C", "Artist D", "Artist E", "Artist F", "Artist G"]
+        for artist in [
+            "Artist A",
+            "Artist B",
+            "Artist C",
+            "Artist D",
+            "Artist E",
+            "Artist F",
+            "Artist G",
+        ]
     )
 
 
@@ -108,9 +118,22 @@ def test_random_album_very_verbose(runner, temp_db):
     )
     assert any(
         artist in result.output
-        for artist in ["Artist A", "Artist B", "Artist C", "Artist D", "Artist E", "Artist F", "Artist G"]
+        for artist in [
+            "Artist A",
+            "Artist B",
+            "Artist C",
+            "Artist D",
+            "Artist E",
+            "Artist F",
+            "Artist G",
+        ]
     )
-    assert "added_at" in result.output.lower() or "2020" in result.output or "2021" in result.output or "2022" in result.output
+    assert (
+        "added_at" in result.output.lower()
+        or "2020" in result.output
+        or "2021" in result.output
+        or "2022" in result.output
+    )
 
 
 def test_random_album_with_timing(runner, temp_db):

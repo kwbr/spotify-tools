@@ -5,15 +5,26 @@ Shared utility functions for the CLI commands.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Protocol
 
 import click
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from click import Context
 
     from .playlist import ResolvedTrack, SearchResult
     from .types import Album
+
+
+class ProgressBar(Protocol):
+    """Protocol for Click progress bar objects."""
+
+    pos: int
+
+    def update(self, n_steps: int) -> None: ...
+
 
 # Output and display functions
 
@@ -40,7 +51,7 @@ def echo_always(message: str) -> None:
     click.echo(message)
 
 
-def create_progress_callback(progress_bar: Any) -> Any:
+def create_progress_callback(progress_bar: ProgressBar) -> Callable[[int, int], None]:
     """Create a progress callback function."""
 
     def update_progress(current: int, total: int) -> None:

@@ -10,26 +10,46 @@ from typing import Any, Protocol
 
 
 class SpotifyClient(Protocol):
-    """Protocol for Spotify client objects."""
+    """Protocol for Spotify client objects matching spotipy's interface."""
 
     def search(
-        self, q: str, type: str, limit: int
+        self,
+        q: str,
+        limit: int = 10,
+        offset: int = 0,
+        type: str = "track",
+        market: str | None = None,
     ) -> dict[str, Any]: ...
 
-    def album_tracks(self, album_id: str) -> dict[str, Any]: ...
+    def album_tracks(
+        self, album_id: str, limit: int = 50, offset: int = 0, market: str | None = None
+    ) -> dict[str, Any]: ...
 
-    def track(self, track_id: str) -> dict[str, Any]: ...
+    def track(self, track_id: str, market: str | None = None) -> dict[str, Any]: ...
 
-    def album(self, album_id: str) -> dict[str, Any]: ...
+    def album(self, album_id: str, market: str | None = None) -> dict[str, Any]: ...
 
     def current_user(self) -> dict[str, Any]: ...
 
     def user_playlist_create(
-        self, user_id: str, name: str, public: bool, description: str
+        self,
+        user: str,
+        name: str,
+        public: bool = True,
+        collaborative: bool = False,
+        description: str = "",
     ) -> dict[str, Any]: ...
 
     def playlist_add_items(
-        self, playlist_id: str, items: list[str]
+        self, playlist_id: str, items: list[str], position: int | None = None
+    ) -> dict[str, Any]: ...
+
+    def current_user_saved_albums(
+        self, limit: int = 20, offset: int = 0, market: str | None = None
+    ) -> dict[str, Any]: ...
+
+    def current_user_recently_played(
+        self, limit: int = 50, after: int | None = None, before: int | None = None
     ) -> dict[str, Any]: ...
 
 
