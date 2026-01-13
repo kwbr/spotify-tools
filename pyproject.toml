@@ -1,6 +1,6 @@
 [project]
 name = "spotify-tools"
-version = "0.13"
+version = "0.14"
 description = "Various tools working with Spotify"
 readme = "README.md"
 authors = [{name = "Kai Weber"}]
