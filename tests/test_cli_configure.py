@@ -55,8 +55,7 @@ def test_configure_with_default_redirect_uri(runner, temp_config_dir):
 def test_configure_updates_existing_config(runner, temp_config_dir):
     config_file = temp_config_dir / "config.toml"
     config_file.write_text(
-        """[spotify]
-client_id = "old_id"
+        """client_id = "old_id"
 client_secret = "old_secret"
 redirect_uri = "http://old"
 """

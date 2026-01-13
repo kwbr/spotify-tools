@@ -31,9 +31,6 @@ class SpotifyClient:
         conf = config.load_config()
         token_cache_path = Path(self.cache_dir / "token")
 
-        # Handle both old flat format and new nested format for backward compatibility
-        spotify_conf = conf.get("spotify", conf)
-
         self.client = spotipy.Spotify(
             auth_manager=SpotifyOAuth(
                 scope=(
@@ -44,9 +41,9 @@ class SpotifyClient:
                     # Access recently played tracks for play history tracking
                     "user-read-recently-played",
                 ),
-                client_id=spotify_conf["client_id"],
-                client_secret=spotify_conf["client_secret"],
-                redirect_uri=spotify_conf["redirect_uri"],
+                client_id=conf["client_id"],
+                client_secret=conf["client_secret"],
+                redirect_uri=conf["redirect_uri"],
                 cache_handler=spotipy.CacheFileHandler(cache_path=token_cache_path),
             ),
         )

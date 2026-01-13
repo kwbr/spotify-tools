@@ -8,8 +8,7 @@ from spotify_tools import spotify
 def test_spotify_client_enter(temp_cache_dir, temp_config_dir):
     config_file = temp_config_dir / "config.toml"
     config_file.write_text(
-        """[spotify]
-client_id = "test_id"
+        """client_id = "test_id"
 client_secret = "test_secret"
 redirect_uri = "http://localhost:8888/callback"
 """
@@ -50,8 +49,7 @@ def test_spotify_client_exit_with_exception():
 def test_spotify_client_context_manager(temp_cache_dir, temp_config_dir):
     config_file = temp_config_dir / "config.toml"
     config_file.write_text(
-        """[spotify]
-client_id = "test_id"
+        """client_id = "test_id"
 client_secret = "test_secret"
 redirect_uri = "http://localhost:8888/callback"
 """

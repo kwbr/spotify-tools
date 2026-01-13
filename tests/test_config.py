@@ -48,8 +48,7 @@ def test_load_config_file_not_found(temp_config_dir):
 
 def test_load_config_success(temp_config_dir):
     config_file = temp_config_dir / "config.toml"
-    config_content = """[spotify]
-client_id = "test_id"
+    config_content = """client_id = "test_id"
 client_secret = "test_secret"
 redirect_uri = "http://localhost:8888/callback"
 """
@@ -57,10 +56,9 @@ redirect_uri = "http://localhost:8888/callback"
 
     loaded_config = config.load_config()
 
-    assert "spotify" in loaded_config
-    assert loaded_config["spotify"]["client_id"] == "test_id"
-    assert loaded_config["spotify"]["client_secret"] == "test_secret"
-    assert loaded_config["spotify"]["redirect_uri"] == "http://localhost:8888/callback"
+    assert loaded_config["client_id"] == "test_id"
+    assert loaded_config["client_secret"] == "test_secret"
+    assert loaded_config["redirect_uri"] == "http://localhost:8888/callback"
 
 
 def test_load_config_invalid_toml(temp_config_dir):
@@ -94,7 +92,6 @@ def test_create_default_config_no_params(temp_config_dir):
     assert config_path.exists()
 
     content = config_path.read_text()
-    assert "[spotify]" in content
     assert "client_id" in content
     assert "client_secret" in content
     assert "redirect_uri" in content
@@ -109,19 +106,16 @@ def test_create_default_config_creates_directory(tmp_path, monkeypatch):
     assert config_path.exists()
 
 
-def test_load_config_with_additional_sections(temp_config_dir):
+def test_load_config_with_additional_keys(temp_config_dir):
     config_file = temp_config_dir / "config.toml"
-    config_content = """[spotify]
-client_id = "test_id"
+    config_content = """client_id = "test_id"
 client_secret = "test_secret"
-
-[other]
-key = "value"
+redirect_uri = "http://localhost:8888/callback"
+custom_key = "custom_value"
 """
     config_file.write_text(config_content)
 
     loaded_config = config.load_config()
 
-    assert "spotify" in loaded_config
-    assert "other" in loaded_config
-    assert loaded_config["other"]["key"] == "value"
+    assert loaded_config["client_id"] == "test_id"
+    assert loaded_config["custom_key"] == "custom_value"

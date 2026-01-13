@@ -295,7 +295,7 @@ wheels = [
 
 [[package]]
 name = "spotify-tools"
-version = "0.13"
+version = "0.15"
 source = { editable = "." }
 dependencies = [
     { name = "click" },

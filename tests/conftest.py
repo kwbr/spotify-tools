@@ -239,8 +239,7 @@ def mock_spotify_client():
 @pytest.fixture
 def mock_config_file(temp_config_dir):
     config_file = temp_config_dir / "config.toml"
-    config_content = """[spotify]
-client_id = "test_client_id"
+    config_content = """client_id = "test_client_id"
 client_secret = "test_client_secret"
 redirect_uri = "http://localhost:8888/callback"
 """

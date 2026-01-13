@@ -88,7 +88,6 @@ def create_default_config(
 
     if not config_path.exists():
         with config_path.open("w") as f:
-            f.write("[spotify]\n")
             f.write(f'client_id = "{client_id or ""}"\n')
             f.write(f'client_secret = "{client_secret or ""}"\n')
             f.write(
