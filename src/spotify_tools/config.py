@@ -2,13 +2,16 @@
 Configuration management for Spotify tools.
 """
 
+from __future__ import annotations
+
 import os
 import sys
 import tomllib
 from pathlib import Path
+from typing import Any
 
 
-def user_cache_dir():
+def user_cache_dir() -> Path:
     """
     Get the user's cache directory according to platform standards.
 
@@ -25,7 +28,7 @@ def user_cache_dir():
     return Path(base) / "spotify-tools"
 
 
-def user_config_dir():
+def user_config_dir() -> Path:
     """
     Get the user's config directory according to platform standards.
 
@@ -40,7 +43,7 @@ def user_config_dir():
     return Path(base) / "spotify-tools"
 
 
-def load_config():
+def load_config() -> dict[str, Any]:
     """
     Load configuration from the config file.
 
@@ -63,7 +66,11 @@ def load_config():
         return tomllib.load(f)
 
 
-def create_default_config(client_id=None, client_secret=None, redirect_uri=None):
+def create_default_config(
+    client_id: str | None = None,
+    client_secret: str | None = None,
+    redirect_uri: str | None = None,
+) -> Path:
     """
     Create default configuration file.
 

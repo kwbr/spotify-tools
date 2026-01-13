@@ -71,7 +71,59 @@ Use `spt configure` to set up credentials interactively.
 
 ### Testing
 
-The project uses pytest but the test suite is currently minimal. When adding tests, follow the existing module structure in the `tests/` directory.
+The project uses pytest with a comprehensive test suite following Simon Willison's CLI testing patterns.
+
+**Running Tests:**
+
+```bash
+# Run all tests
+uv run pytest
+
+# Run with coverage
+uv run pytest --cov=spotify_tools --cov-report=html
+
+# Run specific test file
+uv run pytest tests/test_cli_random_album.py -v
+
+# Run tests quietly (suppress warnings)
+uv run pytest -q -W ignore::ResourceWarning
+```
+
+**Test Structure:**
+
+```
+tests/
+├── conftest.py                    # Shared fixtures (CliRunner, temp DB, mocks)
+├── test_cli_random_album.py      # Integration: random-album command (15 tests)
+├── test_cli_list_albums.py       # Integration: list-albums command (18 tests)
+├── test_database.py              # Unit: database operations (23 tests)
+└── test_playlist.py              # Unit: fuzzy matching logic (48 tests)
+```
+
+**Current Coverage: 44%** (104 tests passing)
+
+High-priority areas tested:
+- ✅ random-album CLI (100%)
+- ✅ list-albums CLI (96%)
+- ✅ Database operations (63%)
+- ✅ Fuzzy matching/playlist logic (46%)
+- ✅ Core types and cache (84-86%)
+
+**Testing Philosophy:**
+
+- Uses Click's `CliRunner` for CLI integration tests
+- Mocks Spotify API calls (no credentials needed)
+- Real SQLite databases in temp directories
+- Parametrized tests for multiple scenarios
+- Fixtures in `conftest.py` handle setup/teardown
+
+**Key Fixtures:**
+
+- `runner` - CliRunner instance for invoking CLI commands
+- `temp_db` - Temporary SQLite database with sample data
+- `temp_cache_dir` - Temporary cache directory
+- `sample_albums` - Realistic album test data
+- `mock_spotify_client` - Mocked Spotify API responses
 
 ## Development Notes
 

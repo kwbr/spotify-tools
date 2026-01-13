@@ -2,12 +2,17 @@
 SQLite database operations for efficient album storage and retrieval.
 """
 
+from __future__ import annotations
+
 import contextlib
 import json
 import sqlite3
 import time
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
 
 from . import perf
 from .types import Album
@@ -36,7 +41,8 @@ def initialize_db(db_path: Path | None = None) -> None:
     """
     db_path = db_path or get_db_path()
 
-    with sqlite3.connect(db_path) as conn:
+    conn = sqlite3.connect(db_path)
+    try:
         conn.execute("""
         CREATE TABLE IF NOT EXISTS metadata (
             key TEXT PRIMARY KEY,
@@ -89,6 +95,9 @@ def initialize_db(db_path: Path | None = None) -> None:
 
         # Set creation timestamp
         set_metadata(conn, "created_at", str(time.time()))
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def set_metadata(conn: sqlite3.Connection, key: str, value: str) -> None:
@@ -124,19 +133,23 @@ def get_metadata(
     return result[0] if result else default
 
 
-def save_albums(albums_by_year: dict[str, list[dict[str, Any]]]) -> None:
+def save_albums(
+    albums_by_year: dict[str, list[dict[str, Any]]], db_path: Path | None = None
+) -> None:
     """
     Save albums to the SQLite database.
 
     Args:
         albums_by_year: Dictionary of albums organized by year.
+        db_path: Path to the database file. If None, uses default path.
     """
-    db_path = get_db_path()
+    db_path = db_path or get_db_path()
 
     # Initialize database (creates tables if not exists)
     initialize_db(db_path)
 
-    with sqlite3.connect(db_path) as conn:
+    conn = sqlite3.connect(db_path)
+    try:
         # Clear existing data
         conn.execute("DELETE FROM albums")
 
@@ -163,57 +176,82 @@ def save_albums(albums_by_year: dict[str, list[dict[str, Any]]]) -> None:
         # Store total count for quick access
         total_count = conn.execute("SELECT COUNT(*) FROM albums").fetchone()[0]
         set_metadata(conn, "total_count", str(total_count))
+        conn.commit()
+    finally:
+        conn.close()
 
 
-def get_db_connection() -> sqlite3.Connection:
+@contextlib.contextmanager
+def get_db_connection(db_path: Path | None = None) -> Iterator[sqlite3.Connection]:
     """
-    Get a connection to the SQLite database.
+    Get a connection to the SQLite database that properly closes on exit.
 
-    Returns:
-        sqlite3.Connection: Database connection.
+    Args:
+        db_path: Path to the database file. If None, uses default path.
+
+    Yields:
+        sqlite3.Connection: Database connection (will be closed on exit).
     """
-    db_path = get_db_path()
+    db_path = db_path or get_db_path()
 
     # Check if database exists, initialize if not
     if not db_path.exists():
         initialize_db(db_path)
 
-    return sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path)
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
-def database_exists() -> bool:
+def database_exists(db_path: Path | None = None) -> bool:
     """
     Check if the album database exists.
+
+    Args:
+        db_path: Path to the database file. If None, uses default path.
 
     Returns:
         bool: True if database exists, False otherwise.
     """
-    db_path = get_db_path()
+    db_path = db_path or get_db_path()
     if not db_path.exists():
         return False
 
     # Verify it's a valid SQLite database with our schema
+    conn = None
     try:
-        with sqlite3.connect(db_path) as conn:
-            cursor = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='albums'"
-            )
-            return cursor.fetchone() is not None
+        conn = sqlite3.connect(db_path)
+        cursor = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='albums'"
+        )
+        return cursor.fetchone() is not None
     except sqlite3.Error:
         return False
+    finally:
+        if conn:
+            conn.close()
 
 
-def get_album_count() -> int:
+def get_album_count(db_path: Path | None = None) -> int:
     """
     Get the total number of albums in the database.
+
+    Args:
+        db_path: Path to the database file. If None, uses default path.
 
     Returns:
         int: Total album count.
     """
-    if not database_exists():
+    if not database_exists(db_path):
         return 0
 
-    with get_db_connection() as conn:
+    with get_db_connection(db_path) as conn:
         # Try to get from metadata first for speed
         count_str = get_metadata(conn, "total_count")
         if count_str:
@@ -224,20 +262,23 @@ def get_album_count() -> int:
         return cursor.fetchone()[0]
 
 
-def get_albums_by_year(year: int | None = None) -> list[Album]:
+def get_albums_by_year(
+    year: int | None = None, db_path: Path | None = None
+) -> list[Album]:
     """
     Get all albums, optionally filtered by a specific year.
 
     Args:
         year: Optional year to filter by. If None, returns all albums.
+        db_path: Path to the database file. If None, uses default path.
 
     Returns:
         List[Album]: List of Album objects.
     """
-    if not database_exists():
+    if not database_exists(db_path):
         return []
 
-    with get_db_connection() as conn:
+    with get_db_connection(db_path) as conn:
         if year is not None:
             cursor = conn.execute(
                 "SELECT uri, name, artists_json, added_at FROM albums WHERE year = ?",
@@ -264,7 +305,10 @@ def get_albums_by_year(year: int | None = None) -> list[Album]:
 
 
 def get_random_albums(
-    count: int, year: int | None = None, verbose: bool = False
+    count: int,
+    year: int | None = None,
+    verbose: bool = False,
+    db_path: Path | None = None,
 ) -> list[Album]:
     """
     Get random albums, optionally filtered by year.
@@ -274,14 +318,15 @@ def get_random_albums(
         year: Optional year filter.
         verbose: If True, fetch all album data. If False (default),
             optimize for URI-only.
+        db_path: Path to the database file. If None, uses default path.
 
     Returns:
         List[Album]: List of random Album objects.
     """
-    if not database_exists():
+    if not database_exists(db_path):
         return []
 
-    with get_db_connection() as conn:
+    with get_db_connection(db_path) as conn:
         params = []
         where_clause = ""
 
@@ -352,32 +397,38 @@ def get_random_albums(
         return albums
 
 
-def get_years() -> list[int]:
+def get_years(db_path: Path | None = None) -> list[int]:
     """
     Get a list of all years in the database.
+
+    Args:
+        db_path: Path to the database file. If None, uses default path.
 
     Returns:
         List[int]: List of years.
     """
-    if not database_exists():
+    if not database_exists(db_path):
         return []
 
-    with get_db_connection() as conn:
+    with get_db_connection(db_path) as conn:
         cursor = conn.execute("SELECT DISTINCT year FROM albums ORDER BY year")
         return [row[0] for row in cursor.fetchall()]
 
 
-def get_album_count_by_year() -> dict[int, int]:
+def get_album_count_by_year(db_path: Path | None = None) -> dict[int, int]:
     """
     Get album counts grouped by year.
+
+    Args:
+        db_path: Path to the database file. If None, uses default path.
 
     Returns:
         Dict[int, int]: Dictionary with year as key and count as value.
     """
-    if not database_exists():
+    if not database_exists(db_path):
         return {}
 
-    with get_db_connection() as conn:
+    with get_db_connection(db_path) as conn:
         cursor = conn.execute(
             "SELECT year, COUNT(*) FROM albums GROUP BY year ORDER BY year"
         )
@@ -406,7 +457,7 @@ def calculate_cache_age() -> tuple[int, int]:
         return (days, hours)
 
 
-def save_play_history(plays: list[dict[str, Any]]) -> int:
+def save_play_history(plays: list[dict[str, Any]], db_path: Path | None = None) -> int:
     """
     Save play history entries to the database.
 
@@ -414,16 +465,19 @@ def save_play_history(plays: list[dict[str, Any]]) -> int:
         plays: List of play history dictionaries with keys:
             track_uri, track_name, artists_json, album_uri,
             album_name, played_at
+        db_path: Path to the database file. If None, uses default path.
 
     Returns:
         int: Number of new entries added (excludes duplicates).
     """
-    if not database_exists():
-        initialize_db()
+    db_path = db_path or get_db_path()
+
+    if not database_exists(db_path):
+        initialize_db(db_path)
 
     # Ensure play_history table exists (for existing databases)
-    db_path = get_db_path()
-    with sqlite3.connect(db_path) as conn:
+    conn = sqlite3.connect(db_path)
+    try:
         conn.execute("""
         CREATE TABLE IF NOT EXISTS play_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -453,9 +507,12 @@ def save_play_history(plays: list[dict[str, Any]]) -> int:
         # Add album_artists_json column if it doesn't exist (migration)
         with contextlib.suppress(sqlite3.OperationalError):
             conn.execute("ALTER TABLE play_history ADD COLUMN album_artists_json TEXT")
+        conn.commit()
+    finally:
+        conn.close()
 
     added_count = 0
-    with get_db_connection() as conn:
+    with get_db_connection(db_path) as conn:
         for play in plays:
             try:
                 conn.execute(
@@ -483,46 +540,53 @@ def save_play_history(plays: list[dict[str, Any]]) -> int:
     return added_count
 
 
-def get_last_sync_time() -> str | None:
+def get_last_sync_time(db_path: Path | None = None) -> str | None:
     """
     Get the timestamp of the last play history sync.
+
+    Args:
+        db_path: Optional database path for testing.
 
     Returns:
         str | None: ISO timestamp of last sync, or None if never synced.
     """
-    if not database_exists():
+    if not database_exists(db_path=db_path):
         return None
 
-    with get_db_connection() as conn:
+    with get_db_connection(db_path=db_path) as conn:
         return get_metadata(conn, "last_play_history_sync")
 
 
-def set_last_sync_time(timestamp: str) -> None:
+def set_last_sync_time(timestamp: str, db_path: Path | None = None) -> None:
     """
     Set the timestamp of the last play history sync.
 
     Args:
         timestamp: ISO timestamp string.
+        db_path: Optional database path for testing.
     """
-    if not database_exists():
-        initialize_db()
+    if not database_exists(db_path=db_path):
+        initialize_db(db_path=db_path)
 
-    with get_db_connection() as conn:
+    with get_db_connection(db_path=db_path) as conn:
         set_metadata(conn, "last_play_history_sync", timestamp)
 
 
-def get_play_count_by_album() -> dict[str, dict[str, Any]]:
+def get_play_count_by_album(db_path: Path | None = None) -> dict[str, dict[str, Any]]:
     """
     Get play counts grouped by album.
+
+    Args:
+        db_path: Path to the database file. If None, uses default path.
 
     Returns:
         dict: Dictionary with album_uri as key and dict with album info:
             {album_uri: {name, artists, play_count, last_played}}
     """
-    if not database_exists():
+    if not database_exists(db_path):
         return {}
 
-    with get_db_connection() as conn:
+    with get_db_connection(db_path) as conn:
         cursor = conn.execute(
             """
             SELECT album_uri, album_name, album_artists_json, COUNT(*) as play_count,
@@ -544,18 +608,21 @@ def get_play_count_by_album() -> dict[str, dict[str, Any]]:
         }
 
 
-def get_play_count_by_track() -> dict[str, dict[str, Any]]:
+def get_play_count_by_track(db_path: Path | None = None) -> dict[str, dict[str, Any]]:
     """
     Get play counts grouped by track.
+
+    Args:
+        db_path: Path to the database file. If None, uses default path.
 
     Returns:
         dict: Dictionary with track_uri as key and dict with track info:
             {track_uri: {name, artists, album_name, play_count, last_played}}
     """
-    if not database_exists():
+    if not database_exists(db_path):
         return {}
 
-    with get_db_connection() as conn:
+    with get_db_connection(db_path) as conn:
         cursor = conn.execute(
             """
             SELECT track_uri, track_name, artists_json, album_name,
@@ -578,33 +645,39 @@ def get_play_count_by_track() -> dict[str, dict[str, Any]]:
         }
 
 
-def get_total_play_count() -> int:
+def get_total_play_count(db_path: Path | None = None) -> int:
     """
     Get the total number of plays recorded.
+
+    Args:
+        db_path: Path to the database file. If None, uses default path.
 
     Returns:
         int: Total play count.
     """
-    if not database_exists():
+    if not database_exists(db_path):
         return 0
 
-    with get_db_connection() as conn:
+    with get_db_connection(db_path) as conn:
         cursor = conn.execute("SELECT COUNT(*) FROM play_history")
         return cursor.fetchone()[0]
 
 
-def get_play_count_by_artist() -> dict[str, dict[str, Any]]:
+def get_play_count_by_artist(db_path: Path | None = None) -> dict[str, dict[str, Any]]:
     """
     Get play counts grouped by artist.
+
+    Args:
+        db_path: Path to the database file. If None, uses default path.
 
     Returns:
         dict: Dictionary with artist name as key and dict with artist info:
             {artist: {play_count, last_played, album_count, track_count}}
     """
-    if not database_exists():
+    if not database_exists(db_path):
         return {}
 
-    with get_db_connection() as conn:
+    with get_db_connection(db_path) as conn:
         # Flatten artists from JSON arrays and aggregate
         cursor = conn.execute(
             """
@@ -721,20 +794,23 @@ def get_play_trends_by_day(days: int = 30) -> dict[str, int]:
         return {row[0]: row[1] for row in cursor.fetchall()}
 
 
-def get_recently_played(limit: int = 50) -> list[dict[str, Any]]:
+def get_recently_played(
+    limit: int = 50, db_path: Path | None = None
+) -> list[dict[str, Any]]:
     """
     Get recently played tracks with full details.
 
     Args:
         limit: Number of recent plays to return.
+        db_path: Path to the database file. If None, uses default path.
 
     Returns:
         list: List of play dictionaries with full details.
     """
-    if not database_exists():
+    if not database_exists(db_path):
         return []
 
-    with get_db_connection() as conn:
+    with get_db_connection(db_path) as conn:
         cursor = conn.execute(
             """
             SELECT track_uri, track_name, artists_json, album_uri,
@@ -842,13 +918,16 @@ def get_syncs_dir() -> Path:
     return syncs_dir
 
 
-def save_raw_sync(plays: list[dict[str, Any]], timestamp: str) -> Path:
+def save_raw_sync(
+    plays: list[dict[str, Any]], timestamp: str, db_path: Path | None = None
+) -> Path:
     """
     Save raw sync data to a JSON file.
 
     Args:
         plays: List of play dictionaries.
         timestamp: ISO timestamp for the sync.
+        db_path: Optional database path (not used, for consistency).
 
     Returns:
         Path: Path to the saved file.
@@ -915,7 +994,8 @@ def rebuild_history_from_syncs() -> tuple[int, int]:
         initialize_db()
 
     db_path = get_db_path()
-    with sqlite3.connect(db_path) as conn:
+    conn = sqlite3.connect(db_path)
+    try:
         conn.execute("DELETE FROM play_history")
 
         # Insert all unique plays
@@ -942,5 +1022,8 @@ def rebuild_history_from_syncs() -> tuple[int, int]:
         if unique_plays:
             latest = max(unique_plays, key=lambda p: p["played_at"])
             set_metadata(conn, "last_play_history_sync", latest["played_at"])
+        conn.commit()
+    finally:
+        conn.close()
 
     return (len(all_plays), len(unique_plays))
