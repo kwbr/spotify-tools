@@ -103,6 +103,7 @@ tests/
 **Current Coverage: 44%** (104 tests passing)
 
 High-priority areas tested:
+
 - ✅ random-album CLI (100%)
 - ✅ list-albums CLI (96%)
 - ✅ Database operations (63%)
