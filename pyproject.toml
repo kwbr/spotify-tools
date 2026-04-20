@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["setuptools>=78.1.0", "wheel>=0.45.1"]
+requires = ["setuptools>=82.0.1", "wheel>=0.45.1"]
 build-backend = "setuptools.build_meta"
 
 [project.scripts]
