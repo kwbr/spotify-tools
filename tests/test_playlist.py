@@ -111,19 +111,19 @@ class TestCalculateMatchQuality:
         assert "Excellent" in reason or "Good" in reason
 
     def test_good_match_with_artist(self):
-        quality, reason = calculate_match_quality(
+        quality, _reason = calculate_match_quality(
             "Bohemian Rhapsody Queen", "Bohemian Rhapsody", "Queen"
         )
         assert quality > 0.7
 
     def test_fair_match(self):
-        quality, reason = calculate_match_quality(
+        quality, _reason = calculate_match_quality(
             "Bohemian", "Bohemian Rhapsody", "Queen"
         )
         assert 0.3 < quality < 0.8
 
     def test_poor_match(self):
-        quality, reason = calculate_match_quality(
+        quality, _reason = calculate_match_quality(
             "Completely Different Song", "Bohemian Rhapsody", "Queen"
         )
         assert quality < 0.3
@@ -142,13 +142,14 @@ class TestCalculateMatchQuality:
         test_cases = [
             ("exact match", "exact match", "artist", "Excellent"),
             ("good song", "good song name", "artist", "Good"),
-            ("song", "completely different", "artist", "Weak"),
+            ("song", "some melody", "artist", "Weak"),
         ]
 
         for query, result_name, result_artist, expected_category in test_cases:
             quality, reason = calculate_match_quality(query, result_name, result_artist)
             assert isinstance(quality, float)
             assert 0.0 <= quality <= 1.0
+            assert expected_category in reason
 
 
 class TestParseItem:
@@ -236,7 +237,7 @@ class TestEdgeCases:
         assert similarity == 1.0
 
     def test_special_album_names(self):
-        quality, reason = calculate_match_quality(
+        quality, _reason = calculate_match_quality(
             "(What's the Story) Morning Glory?",
             "What's the Story Morning Glory",
             "Oasis",

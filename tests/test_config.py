@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import tomllib
+
 import pytest
 
 from spotify_tools import config
@@ -65,7 +67,7 @@ def test_load_config_invalid_toml(temp_config_dir):
     config_file = temp_config_dir / "config.toml"
     config_file.write_text("invalid toml [[[")
 
-    with pytest.raises(Exception):
+    with pytest.raises(tomllib.TOMLDecodeError):
         config.load_config()
 
 

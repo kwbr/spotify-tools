@@ -77,7 +77,7 @@ def show_summary() -> None:
 
     if album_stats:
         echo_info("\nTop 5 Albums:")
-        for i, (uri, info) in enumerate(list(album_stats.items())[:5], 1):
+        for i, (_uri, info) in enumerate(list(album_stats.items())[:5], 1):
             artists = ", ".join(info["artists"]) if info["artists"] else "Unknown"
             echo_info(
                 f"  {i}. {info['name']} by {artists} - {info['play_count']} plays"
@@ -85,7 +85,7 @@ def show_summary() -> None:
 
     if track_stats:
         echo_info("\nTop 5 Tracks:")
-        for i, (uri, info) in enumerate(list(track_stats.items())[:5], 1):
+        for i, (_uri, info) in enumerate(list(track_stats.items())[:5], 1):
             artists = ", ".join(info["artists"])
             echo_info(
                 f"  {i}. {info['name']} by {artists} - {info['play_count']} plays"
@@ -111,7 +111,7 @@ def show_top_albums(limit: int, days: int | None) -> None:
             album_counts.items(), key=lambda x: x[1]["count"], reverse=True
         )
         echo_info(f"Top {min(limit, len(album_stats))} Albums (Last {days} Days):\n")
-        for i, (uri, info) in enumerate(album_stats[:limit], 1):
+        for i, (_uri, info) in enumerate(album_stats[:limit], 1):
             artists = ", ".join(info["artists"]) if info["artists"] else "Unknown"
             echo_info(f"{i:3}. {info['name']} by {artists} - {info['count']} plays")
     else:
@@ -120,7 +120,7 @@ def show_top_albums(limit: int, days: int | None) -> None:
             echo_info("No album statistics found.")
             return
         echo_info(f"Top {min(limit, len(album_stats))} Albums (All Time):\n")
-        for i, (uri, info) in enumerate(list(album_stats.items())[:limit], 1):
+        for i, (_uri, info) in enumerate(list(album_stats.items())[:limit], 1):
             artists = ", ".join(info["artists"]) if info["artists"] else "Unknown"
             echo_info(f"{i:3}. {info['name']} by {artists}")
             echo_info(f"     Plays: {info['play_count']}")
@@ -148,7 +148,7 @@ def show_top_tracks(limit: int, days: int | None) -> None:
             track_counts.items(), key=lambda x: x[1]["count"], reverse=True
         )
         echo_info(f"Top {min(limit, len(track_stats))} Tracks (Last {days} Days):\n")
-        for i, (uri, info) in enumerate(track_stats[:limit], 1):
+        for i, (_uri, info) in enumerate(track_stats[:limit], 1):
             artists = ", ".join(info["artists"])
             echo_info(f"{i:3}. {info['name']} by {artists} - {info['count']} plays")
     else:
@@ -157,7 +157,7 @@ def show_top_tracks(limit: int, days: int | None) -> None:
             echo_info("No track statistics found.")
             return
         echo_info(f"Top {min(limit, len(track_stats))} Tracks (All Time):\n")
-        for i, (uri, info) in enumerate(list(track_stats.items())[:limit], 1):
+        for i, (_uri, info) in enumerate(list(track_stats.items())[:limit], 1):
             artists = ", ".join(info["artists"])
             echo_info(f"{i:3}. {info['name']} by {artists}")
             echo_info(f"     Album: {info['album_name']}")

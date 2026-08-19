@@ -278,8 +278,8 @@ def search_album(sp: SpotifyClient, query: str) -> SearchResult:
                                 source_query=f"album:{query}",
                             )
                         )
-                except Exception:
-                    pass  # Skip track resolution on error
+                except Exception as exc:
+                    reason = f"{reason}; could not resolve album tracks: {exc}"
 
             return SearchResult(
                 query=query,
@@ -374,7 +374,7 @@ def resolve_uri(sp: SpotifyClient, uri: str) -> list[ResolvedTrack] | None:
                     )
                 return resolved_tracks
     except Exception:
-        pass
+        return None
     return None
 
 

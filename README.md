@@ -107,37 +107,29 @@ spt list-albums --year 2020
 
 ## Development
 
-To contribute to this tool, first checkout the code and install dependencies:
-
-### With uv (recommended)
+The development workflow uses [uv](https://docs.astral.sh/uv/) and the checked-in
+lockfile:
 
 ```bash
+git clone https://github.com/kwbr/spotify-tools.git
 cd spotify-tools
-uv sync
+uv sync --locked
 ```
 
-### With pip
+Run the same quality gate used in CI:
 
 ```bash
-cd spotify-tools
-python -m venv venv
-source venv/bin/activate
-pip install -e '.[test]'
+make check
 ```
 
-### Development Commands
+Other development commands are available through the Makefile:
 
 ```bash
-# Linting and formatting
-uv run ruff check
-uv run ruff format
-
-# Type checking
-uv run pyright
-
-# Testing
-uv run pytest
-
-# Run the CLI in development
-python -m spotify_tools
+make help          # List available targets
+make format        # Apply Ruff lint fixes and formatting
+make typecheck     # Run Pyright
+make test          # Run pytest
+make clean         # Remove generated caches and coverage output
 ```
+
+Run the CLI in development with `uv run spt --help`.

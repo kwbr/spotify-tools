@@ -12,12 +12,12 @@ from .stats import stats
 from .sync_history import sync_history
 
 __all__ = [
-    "random_album",
-    "refresh_cache",
-    "list_albums",
-    "create_playlist",
     "configure",
-    "sync_history",
+    "create_playlist",
+    "list_albums",
+    "random_album",
     "rebuild_history",
+    "refresh_cache",
     "stats",
+    "sync_history",
 ]

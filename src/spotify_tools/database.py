@@ -336,9 +336,10 @@ def get_random_albums(
 
         # Only fetch URI if not in verbose mode (huge performance optimization)
         if not verbose:
-            # Simplified query that only retrieves URIs
+            # The interpolated WHERE clause is a fixed string selected above;
+            # user values remain parameterized.
             query = f"""SELECT uri FROM albums
-                      {where_clause} ORDER BY RANDOM() LIMIT ?"""
+                      {where_clause} ORDER BY RANDOM() LIMIT ?"""  # noqa: S608
             params.append(count)
 
             with perf.measure_time("Execute optimized URI-only query"):
@@ -350,7 +351,8 @@ def get_random_albums(
                 albums.append(Album.from_uri_only(row[0]))
 
             return albums
-        # Full query with all fields when in verbose mode
+        # The interpolated WHERE clause is a fixed string selected above;
+        # user values remain parameterized.
         query = f"""
             WITH album_data AS (
                 SELECT
@@ -369,7 +371,7 @@ def get_random_albums(
                 json_extract(artists_json, '$') AS artists_array,
                 added_at
             FROM album_data
-            """
+            """  # noqa: S608
 
         params.append(count)
 
@@ -741,16 +743,16 @@ def get_plays_in_time_range(
 
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
-        cursor = conn.execute(
-            f"""
+        # Every condition is selected from the fixed predicates above; timestamp
+        # values remain parameterized.
+        query = f"""
             SELECT track_uri, track_name, artists_json, album_uri,
                    album_name, album_artists_json, played_at
             FROM play_history
             {where_clause}
             ORDER BY played_at DESC
-            """,
-            params,
-        )
+            """  # noqa: S608
+        cursor = conn.execute(query, params)
 
         return [
             {

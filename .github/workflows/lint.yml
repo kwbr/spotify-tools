@@ -1,14 +1,30 @@
+name: Checks
+
 on:
   push:
-    branches:
-    - main
+  pull_request:
+
+permissions:
+  contents: read
 
 jobs:
-  lint:
-    name: Linting
-    runs-on: ubuntu-22.04
+  checks:
+    name: Quality checks
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - name: Check out repository
+        uses: actions/checkout@v7
 
-      # Check python code
-      - uses: chartboost/ruff-action@v1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Run checks
+        run: make check
